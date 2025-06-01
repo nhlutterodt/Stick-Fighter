@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stickman Fighter</title>
+    <script src="https://cdn.tailwindcss.com"></script> <!-- Use Tailwind CSS CDN -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        #gameContainer {
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            position: relative; 
+            background-color: #fff; 
+        }
+        canvas {
+            display: block;
+            border-radius: 6px; 
+        }
+        .health-bar-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 5px 0;
+            box-sizing: border-box;
+        }
+        .health-bar {
+            height: 25px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background-color: #e0e0e0;
+            overflow: hidden; 
+        }
+        .health-bar-inner {
+            height: 100%;
+            background-color: #4CAF50; 
+            transition: width 0.3s ease-in-out;
+            border-radius: 3px 0 0 3px; 
+        }
+        .player-1-health { width: calc(50% - 5px); }
+        .player-2-health { width: calc(50% - 5px); }
+
+        #player1HealthBarInner { background-color: #3b82f6; }
+        #player2HealthBarInner { background-color: #ef4444; }
+        
+        #messageDisplay, .menu-overlay-text { 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5em; 
+            font-weight: bold;
+            color: #1f2937; 
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 20px 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 10; 
+            display: none; 
+        }
+        .menu-overlay-text { 
+             top: 15%; font-size: 2em; padding: 15px 25px; background-color: rgba(230, 230, 230, 0.9);
+        }
+
+        .controls-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9e9e9;
+            border-radius: 8px;
+            font-size: 0.80em; 
+            text-align: left;
+            max-width: 600px;
+        }
+        .controls-info h3 { margin-top: 0; text-align: center; }
+        .controls-info p { margin: 3px 0; }
+
+        #resetButton { 
+            margin-top: 15px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #60a5fa;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #resetButton:hover { background-color: #3b82f6; }
+        #resetButton:disabled { background-color: #9ca3af; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <h1 class="text-3xl font-bold my-4 text-gray-700">Stickman Fighter</h1>
+
+    <div id="healthBars" class="health-bar-container w-full max-w-3xl px-2" style="display: none;">
+        <div id="player1HealthBar" class="health-bar player-1-health">
+            <div id="player1HealthBarInner" class="health-bar-inner"></div>
+        </div>
+        <div id="player2HealthBar" class="health-bar player-2-health">
+            <div id="player2HealthBarInner" class="health-bar-inner"></div>
+        </div>
+    </div>
+
+    <div id="gameContainer" class="mt-2">
+        <canvas id="gameCanvas"></canvas>
+        <div id="messageDisplay"></div> 
+        <div id="pauseMenuTitle" class="menu-overlay-text" style="display:none;">Paused</div>
+        <div id="settingsMenuTitle" class="menu-overlay-text" style="display:none;">Settings</div>
+    </div>
+
+    <button id="resetButton" class="mt-4">Main Menu</button> 
+
+    <div class="controls-info w-full max-w-xl mt-4 p-4 bg-gray-200 rounded-lg shadow">
+        <h3 class="text-xl font-semibold text-center mb-2 text-gray-700">Controls</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="font-medium text-blue-600">Player 1 (Blue Stickman):</p>
+                <p><strong>A/D:</strong> Move Left/Right</p><p><strong>W:</strong> Jump</p>
+                <p><strong>F:</strong> Punch / Flying Kick (in air)</p><p><strong>G:</strong> Kick</p>
+                <p><strong>S:</strong> Ground Slam (in air)</p><p><strong>L-Shift:</strong> Guard</p>
+                <p><strong>C (+W/A/S/D):</strong> Air Dodge</p><p><strong>V:</strong> Parry</p>
+                <p><strong>Q:</strong> Run/Dash (Hold)</p>
+                <p><strong>Esc:</strong> Pause Game</p>
+            </div>
+            <div>
+                <p class="font-medium text-red-600">Player 2 (Red / Computer):</p>
+                <p><strong>Arrows:</strong> Move Left/Right/Jump</p><p><strong>K:</strong> Punch / Flying Kick (in air)</p>
+                <p><strong>L:</strong> Kick</p><p><strong>Down Arrow:</strong> Ground Slam (in air)</p>
+                <p><strong>R-Shift:</strong> Guard</p><p><strong>M (+Arrows):</strong> Air Dodge</p><p><strong>N:</strong> Parry</p>
+                <p><strong>U:</strong> Run/Dash (Hold)</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const messageDisplay = document.getElementById('messageDisplay');
+        const resetButton = document.getElementById('resetButton');
+        const healthBarsDiv = document.getElementById('healthBars');
+        const pauseMenuTitle = document.getElementById('pauseMenuTitle');
+        const settingsMenuTitle = document.getElementById('settingsMenuTitle');
+
+
+        // Game constants
+        const CANVAS_WIDTH = 800; const CANVAS_HEIGHT = 400; const GROUND_LEVEL = CANVAS_HEIGHT - 50;
+        const BASE_GRAVITY = 0.9; 
+        let currentGravity = BASE_GRAVITY; 
+        const JUMP_FORCE = -20; 
+        const MAX_WALK_SPEED = 4.5; 
+        const MAX_RUN_SPEED = 7.5;
+        const BASE_PLAYER_ACCELERATION = 0.6; 
+        const RUN_ACCELERATION_MULTIPLIER = 1.8;
+        const PLAYER_FRICTION = 0.35; 
+        const AIR_FRICTION = 0.08; 
+        const PLAYER_HEALTH_MAX = 100;
+        const PUNCH_DAMAGE = 8; const KICK_DAMAGE = 12; const FLYING_KICK_DAMAGE = 18; const GROUND_SLAM_DAMAGE = 22;
+        const PUNCH_RANGE = 65; const KICK_RANGE = 80; const FLYING_KICK_RANGE = 95; const GROUND_SLAM_AOE_RANGE = 110;
+        const ATTACK_DURATION = 350; 
+        const SPECIAL_ATTACK_DURATION = 550; 
+        const GROUND_SLAM_FORCE = 28;
+        const HITBOX_HEIGHT = 100; const HITBOX_WIDTH = 40; 
+        const GUARD_DAMAGE_REDUCTION = 0.75; const GUARD_PUSHBACK_FORCE = 2;
+        const HIT_STUN_DURATION_LIGHT = 150; const HIT_STUN_DURATION_HEAVY = 300;
+        const KNOCKBACK_BASE_X = 5; 
+        const KNOCKBACK_BASE_Y = -3.5; 
+        const KNOCKBACK_SPECIAL_MULTIPLIER = 1.8;
+        const LOADING_DURATION = 1000; 
+        const AIR_DODGE_FORCE = 15; const AIR_DODGE_DURATION = 150; const AIR_DODGE_COOLDOWN = 800; 
+        const PARRY_DURATION = 150; const PARRY_COOLDOWN = 1000;
+        const PARRY_SUCCESS_STUN_MULTIPLIER = 1.5; const PARRY_FAIL_VULNERABLE_DURATION = 300;
+        const COMBO_WINDOW = 350; const COMBO_DAMAGE_MULTIPLIER_STEP = 0.15; 
+        const LIMB_IMPAIR_THRESHOLD_MULTIPLIER = 0.7; 
+        const LIMB_IMPAIR_SPEED_REDUCTION = 0.7; 
+        const LIMB_IMPAIR_JUMP_REDUCTION = 0.8; 
+        const LIMB_HITBOX_PADDING = 4; 
+        const LERP_RATE = 0.3; 
+        const ANIMATION_LERP_RATE = 0.25; 
+
+        /* >>> NEW: Power-up & VFX constants <<< */
+        const POWERUP_SPAWN_INTERVAL = 15000;   // ms between spawns
+        const POWERUP_FALL_SPEED = 2.5;         // px per tick
+        const HIT_SPARK_COUNT = 14;             // particles per spark
+        const HEALTH_POWERUP_AMOUNT = 20;       // HP restored
+        /* >>> END NEW <<< */
+
+        const MIN_ELBOW_ANGLE = 0; 
+        const MAX_ELBOW_ANGLE = Math.PI * 0.85; 
+        const MIN_KNEE_ANGLE = 0; 
+        const MAX_KNEE_ANGLE = Math.PI * 0.85; 
+
+        const WALK_CYCLE_FREQUENCY = 0.13; 
+        const WALK_HIP_AMPLITUDE = Math.PI / 8;  
+        const WALK_KNEE_AMPLITUDE = Math.PI / 6;  
+        const WALK_ARM_SWING_AMPLITUDE = Math.PI / 5; 
+        const RUN_CYCLE_MULTIPLIER = 1.5; 
+
+        const FOOT_TARGET_Y_OFFSET = 2; // Slight offset to ensure feet don't clip visually
+
+
+        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+
+        let player1, player2;
+        let gameActive = false; 
+        const keysPressed = {};
+        let animationFrameId;
+        let selectedAIDifficulty = 'Medium'; 
+        let currentFightMode = 'PvP'; 
+        let currentGameState = 'LOADING'; 
+        let obstacles = [];
+        let powerUps = [];
+        let hitSparks = []; 
+        let lastPowerUpSpawnTime = 0;
+        
+        const eventManager = {
+            listeners: {},
+            subscribe(eventType, callback) { if (!this.listeners[eventType]) { this.listeners[eventType] = []; } this.listeners[eventType].push(callback); },
+            unsubscribe(eventType, callback) { if (!this.listeners[eventType]) return; this.listeners[eventType] = this.listeners[eventType].filter(listener => listener !== callback); },
+            dispatchEvent(eventType, detail) { if (!this.listeners[eventType]) return; this.listeners[eventType].forEach(listener => listener(detail)); }
+        };
+
+        const initialMenuButton = { x: CANVAS_WIDTH / 2 - 100, y: CANVAS_HEIGHT / 2 + 20, width: 200, height: 60, text: "Start Game", color: '#60a5fa', hoverColor: '#3b82f6', textColor: '#ffffff', id: 'start'};
+        const pvpButton = { x: CANVAS_WIDTH / 2 - 150, y: CANVAS_HEIGHT / 2 - 60, width: 300, height: 50, text: "Player vs Player", color: '#34d399', hoverColor: '#10b981', textColor: '#ffffff', id: 'pvp'};
+        const pvcButton = { x: CANVAS_WIDTH / 2 - 150, y: CANVAS_HEIGHT / 2 + 10, width: 300, height: 50, text: "Player vs Computer", color: '#fbbf24', hoverColor: '#f59e0b', textColor: '#ffffff', id: 'pvc'};
+        const difficultyEasyButton = { x: CANVAS_WIDTH / 2 - 150, y: CANVAS_HEIGHT / 2 - 90, width: 300, height: 50, text: "Easy", color: '#a7f3d0', hoverColor: '#6ee7b7', textColor: '#065f46', id: 'easy'};
+        const difficultyMediumButton = { x: CANVAS_WIDTH / 2 - 150, y: CANVAS_HEIGHT / 2 - 30, width: 300, height: 50, text: "Medium", color: '#fcd34d', hoverColor: '#fbbf24', textColor: '#92400e', id: 'medium'};
+        const difficultyHardButton = { x: CANVAS_WIDTH / 2 - 150, y: CANVAS_HEIGHT / 2 + 30, width: 300, height: 50, text: "Hard", color: '#f87171', hoverColor: '#ef4444', textColor: '#991b1b', id: 'hard'};
+        const pauseResumeButton = { x: CANVAS_WIDTH / 2 - 125, y: CANVAS_HEIGHT / 2 - 80, width: 250, height: 50, text: "Resume", color: '#34d399', hoverColor: '#10b981', textColor: '#ffffff', id: 'resume'};
+        const pauseSettingsButton = { x: CANVAS_WIDTH / 2 - 125, y: CANVAS_HEIGHT / 2 - 20, width: 250, height: 50, text: "Settings", color: '#fbbf24', hoverColor: '#f59e0b', textColor: '#ffffff', id: 'pauseSettings'};
+        const pauseMainMenuButton = { x: CANVAS_WIDTH / 2 - 125, y: CANVAS_HEIGHT / 2 + 40, width: 250, height: 50, text: "Main Menu", color: '#f87171', hoverColor: '#ef4444', textColor: '#ffffff', id: 'pauseMainMenu'};
+        const settingsBackButton = { x: CANVAS_WIDTH / 2 - 100, y: CANVAS_HEIGHT - 70, width: 200, height: 50, text: "Back to Pause", color: '#9ca3af', hoverColor: '#6b7280', textColor: '#ffffff', id: 'settingsBack'};
+        const gravityLowButton =    { x: CANVAS_WIDTH / 2 - 200, y: CANVAS_HEIGHT / 2 - 80, width: 120, height: 40, text: "Gravity: Low", color: '#60a5fa', hoverColor: '#3b82f6', textColor: '#ffffff', id: 'gravityLow'};
+        const gravityNormalButton = { x: CANVAS_WIDTH / 2 - 60,  y: CANVAS_HEIGHT / 2 - 80, width: 120, height: 40, text: "Gravity: Norm", color: '#60a5fa', hoverColor: '#3b82f6', textColor: '#ffffff', id: 'gravityNormal'};
+        const gravityHighButton =   { x: CANVAS_WIDTH / 2 + 80,  y: CANVAS_HEIGHT / 2 - 80, width: 120, height: 40, text: "Gravity: High", color: '#60a5fa', hoverColor: '#3b82f6', textColor: '#ffffff', id: 'gravityHigh'};
+        const settingsAIDifficultyY = CANVAS_HEIGHT / 2 + 0; 
+        const menuButtons = { MENU: [initialMenuButton], MODE_SELECT: [pvpButton, pvcButton], DIFFICULTY_SELECT: [difficultyEasyButton, difficultyMediumButton, difficultyHardButton], PAUSED: [pauseResumeButton, pauseSettingsButton, pauseMainMenuButton], SETTINGS_MENU: [settingsBackButton, gravityLowButton, gravityNormalButton, gravityHighButton]};
+
+        function lerp(start, end, t) { return start * (1 - t) + end * t; }
+        function angleLerp(startAngle, endAngle, t) { let delta = (endAngle - startAngle) % (2 * Math.PI); if (delta > Math.PI) delta -= 2 * Math.PI; if (delta < -Math.PI) delta += 2 * Math.PI; return startAngle + delta * t; }
+        function easeInOutQuad(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+        class Obstacle { /* ... Unchanged ... */ constructor(x,y,width,height,color='#8D6E63'){this.x=x;this.y=y;this.width=width;this.height=height;this.color=color;}draw(){ctx.fillStyle=this.color;ctx.fillRect(this.x,this.y,this.width,this.height);ctx.strokeStyle='#5D4037';ctx.lineWidth=2;ctx.strokeRect(this.x,this.y,this.width,this.height);}}
+        class PowerUp { /* ... Unchanged ... */ constructor(x,y,radius,type,color){this.x=x;this.y=y;this.radius=radius;this.type=type;this.color=color;this.active=true;}update(){if(!this.active)return;this.y+=POWERUP_FALL_SPEED;if(this.y-this.radius>CANVAS_HEIGHT){this.active=false;}}draw(){if(!this.active)return;ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);ctx.fill();if(this.type==='health'){ctx.strokeStyle='#FFFFFF';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(this.x-this.radius/2,this.y);ctx.lineTo(this.x+this.radius/2,this.y);ctx.moveTo(this.x,this.y-this.radius/2);ctx.lineTo(this.x,this.y+this.radius/2);ctx.stroke();}}}
+        class HitSpark { /* ... Unchanged ... */ constructor(x,y,size,color,duration){this.x=x;this.y=y;this.initialSize=size;this.size=size;this.color=color;this.duration=duration;this.initialDuration=duration;this.active=true;this.particles=[];for(let i=0;i<HIT_SPARK_COUNT;i++){this.particles.push({x:this.x,y:this.y,vx:(Math.random()-0.5)*(size/2),vy:(Math.random()-0.5)*(size/2),alpha:1});}}update(delta){if(!this.active)return;this.duration-=delta;if(this.duration<=0){this.active=false;return;}const progress=this.duration/this.initialDuration;this.size=this.initialSize*progress;this.particles.forEach(p=>{p.x+=p.vx*(delta/(1000/60));p.y+=p.vy*(delta/(1000/60));p.alpha=progress;});}draw(){if(!this.active)return;this.particles.forEach(p=>{ctx.fillStyle=`rgba(${parseInt(this.color.slice(1,3),16)}, ${parseInt(this.color.slice(3,5),16)}, ${parseInt(this.color.slice(5,7),16)}, ${p.alpha})`;ctx.beginPath();ctx.arc(p.x,p.y,Math.max(1,this.size/(HIT_SPARK_COUNT/2)),0,Math.PI*2);ctx.fill();});}}
+
+
+        class Stickman {
+            constructor(x, y, colors, facingRight = true, controls, isNPC = false, archetype = 'CounterStriker') { 
+                this.x = x; this.y = y; this.width = HITBOX_WIDTH; this.height = HITBOX_HEIGHT; 
+                this.velocityX = 0; this.velocityY = 0; this.health = PLAYER_HEALTH_MAX;
+                this.colors = colors; this.isJumping = false; this.facingRight = facingRight;
+                this.isAttacking = false; this.attackType = null; this.attackTimer = 0; 
+                this.isGuarding = false; this.isPerformingSpecialMove = false; this.specialMoveType = null;
+                this.groundSlamImpactDone = false; this.hitStunTimer = 0; 
+                this.isNPC = isNPC; this.controls = this.isNPC ? {} : controls; 
+                this.archetype = isNPC ? archetype : null; 
+                this.aiActionCooldown = 0; this.aiDecisionIntervalBase = 300; 
+                this.aiAggression = 0.5; this.aiPreferredDistance = KICK_RANGE * 0.8;
+                this.aiTargetX = null; this.aiWantsToAttack = null; 
+                this.aiWantsToGuard = false; this.aiWantsToJump = false; this.aiWantsToParry = false;
+                this.aiBaseAttackProb = 0.15; this.aiBaseGuardProb = 0.1;
+                this.aiBaseParryProb = 0.05; this.aiBaseJumpProb = 0.03;
+                this.isDodging = false; this.dodgeTimer = 0; this.dodgeCooldownTimer = 0;
+                this.isParrying = false; this.parryTimer = 0; this.parryCooldownTimer = 0;
+                this.parryFailedVulnTimer = 0; 
+                this.comboState = { lastAttackTime: 0, lastAttackType: null, count: 0, lastHitTime: 0 };
+                this.limbs = { 
+                    head: { impairedTimer: 0, baseColor: colors.head }, torso: { impairedTimer: 0, baseColor: colors.torso },
+                    leftUpperArm: { impairedTimer: 0, baseColor: colors.leftUpperArm }, leftLowerArm: { impairedTimer: 0, baseColor: colors.leftLowerArm },
+                    rightUpperArm: { impairedTimer: 0, baseColor: colors.rightUpperArm }, rightLowerArm: { impairedTimer: 0, baseColor: colors.rightLowerArm },
+                    leftUpperLeg: { impairedTimer: 0, baseColor: colors.leftUpperLeg }, leftLowerLeg: { impairedTimer: 0, baseColor: colors.leftLowerLeg },
+                    rightUpperLeg: { impairedTimer: 0, baseColor: colors.rightUpperLeg }, rightLowerLeg: { impairedTimer: 0, baseColor: colors.rightLowerLeg }
+                };
+                this.limbImpairDuration = 2500; 
+                this.impairedLimbColor = '#777777'; 
+                this.headRadius = 15; this.torsoLength = 60; this.limbSegmentLength = 30; this.lineWidth = 8;
+                this.walkCycleTime = Math.random() * (2 * Math.PI); // Start at a random point in the cycle
+                this.isRunning = false; 
+                this.leftFootPlantedX = null; // For IK foot planting
+                this.rightFootPlantedX = null; // For IK foot planting
+
+
+                this.currentAngles = {
+                    leftShoulderZ: Math.PI / 4, leftElbowZ: Math.PI / 4, 
+                    rightShoulderZ: -Math.PI / 4, rightElbowZ: Math.PI / 4, 
+                    leftHipZ: Math.PI / 6, leftKneeZ: Math.PI / 6,
+                    rightHipZ: -Math.PI / 6, rightKneeZ: Math.PI / 6,
+                };
+                this.targetAngles = { ...this.currentAngles }; 
+                this.activeProceduralAnimation = null; 
+                this.mass = 1.0; 
+            }
+
+            getLimbColor(limbName) { return this.limbs[limbName].impairedTimer > 0 ? this.impairedLimbColor : this.limbs[limbName].baseColor; }
+            getJointPositions() { /* ... Unchanged ... */ const dir = this.facingRight ? 1 : -1; const hipX = this.x; const hipY = this.y + this.torsoLength * 0.3; const neckX = this.x; const neckY = this.y - this.torsoLength * 0.7; const headCenterX = neckX; const headCenterY = neckY - this.headRadius; const shoulderYOffset = this.torsoLength * 0.1; const shoulderX = neckX; const shoulderY = neckY + shoulderYOffset; const joints = { hip: { x: hipX, y: hipY }, neck: { x: neckX, y: neckY }, head: { cx: headCenterX, cy: headCenterY, radius: this.headRadius }, leftShoulder: { x: shoulderX, y: shoulderY }, rightShoulder: { x: shoulderX, y: shoulderY } }; const lShoulderAngle = this.currentAngles.leftShoulderZ * dir; joints.leftElbow = { x: joints.leftShoulder.x + Math.cos(lShoulderAngle) * this.limbSegmentLength, y: joints.leftShoulder.y + Math.sin(lShoulderAngle) * this.limbSegmentLength }; const lElbowAngle = lShoulderAngle + this.currentAngles.leftElbowZ * dir; joints.leftHand = { x: joints.leftElbow.x + Math.cos(lElbowAngle) * this.limbSegmentLength, y: joints.leftElbow.y + Math.sin(lElbowAngle) * this.limbSegmentLength }; const rShoulderAngle = this.currentAngles.rightShoulderZ * dir; joints.rightElbow = { x: joints.rightShoulder.x + Math.cos(rShoulderAngle) * this.limbSegmentLength, y: joints.rightShoulder.y + Math.sin(rShoulderAngle) * this.limbSegmentLength }; const rElbowAngle = rShoulderAngle + this.currentAngles.rightElbowZ * dir; joints.rightHand = { x: joints.rightElbow.x + Math.cos(rElbowAngle) * this.limbSegmentLength, y: joints.rightElbow.y + Math.sin(rElbowAngle) * this.limbSegmentLength }; const lHipAngle = this.currentAngles.leftHipZ * dir; joints.leftKnee = { x: joints.hip.x + Math.cos(lHipAngle) * this.limbSegmentLength, y: joints.hip.y + Math.sin(lHipAngle) * this.limbSegmentLength }; const lKneeAngle = lHipAngle + this.currentAngles.leftKneeZ * dir; joints.leftFoot = { x: joints.leftKnee.x + Math.cos(lKneeAngle) * this.limbSegmentLength, y: joints.leftKnee.y + Math.sin(lKneeAngle) * this.limbSegmentLength }; const rHipAngle = this.currentAngles.rightHipZ * dir; joints.rightKnee = { x: joints.hip.x + Math.cos(rHipAngle) * this.limbSegmentLength, y: joints.hip.y + Math.sin(rHipAngle) * this.limbSegmentLength }; const rKneeAngle = rHipAngle + this.currentAngles.rightKneeZ * dir; joints.rightFoot = { x: joints.rightKnee.x + Math.cos(rKneeAngle) * this.limbSegmentLength, y: joints.rightKnee.y + Math.sin(rKneeAngle) * this.limbSegmentLength }; return joints; }
+            getLimbHitboxes() { /* ... Unchanged ... */ const joints = this.getJointPositions(); const hitboxes = {}; const p = LIMB_HITBOX_PADDING; hitboxes.head = { type: 'circle', cx: joints.head.cx, cy: joints.head.cy, radius: joints.head.radius + p }; const createSegmentAABB = (p1, p2) => { return { type: 'rect', x: Math.min(p1.x, p2.x) - p, y: Math.min(p1.y, p2.y) - p, width: Math.abs(p1.x - p2.x) + 2 * p, height: Math.abs(p1.y - p2.y) + 2 * p, }; }; hitboxes.torso = createSegmentAABB(joints.neck, joints.hip); if (this.facingRight) { hitboxes.rightUpperArm = createSegmentAABB(joints.rightShoulder, joints.rightElbow); hitboxes.rightLowerArm = createSegmentAABB(joints.rightElbow, joints.rightHand); hitboxes.leftUpperArm = createSegmentAABB(joints.leftShoulder, joints.leftElbow); hitboxes.leftLowerArm = createSegmentAABB(joints.leftElbow, joints.leftHand); hitboxes.rightUpperLeg = createSegmentAABB(joints.hip, joints.rightKnee); hitboxes.rightLowerLeg = createSegmentAABB(joints.rightKnee, joints.rightFoot); hitboxes.leftUpperLeg = createSegmentAABB(joints.hip, joints.leftKnee); hitboxes.leftLowerLeg = createSegmentAABB(joints.leftKnee, joints.leftFoot); } else { hitboxes.leftUpperArm = createSegmentAABB(joints.leftShoulder, joints.leftElbow); hitboxes.leftLowerArm = createSegmentAABB(joints.leftElbow, joints.leftHand); hitboxes.rightUpperArm = createSegmentAABB(joints.rightShoulder, joints.rightElbow); hitboxes.rightLowerArm = createSegmentAABB(joints.rightElbow, joints.rightHand); hitboxes.leftUpperLeg = createSegmentAABB(joints.hip, joints.leftKnee); hitboxes.leftLowerLeg = createSegmentAABB(joints.leftKnee, joints.leftFoot); hitboxes.rightUpperLeg = createSegmentAABB(joints.hip, joints.rightKnee); hitboxes.rightLowerLeg = createSegmentAABB(joints.rightKnee, joints.rightFoot); } for (const key in hitboxes) { if (hitboxes[key].type === 'rect') { if (hitboxes[key].width < 2 * p) hitboxes[key].width = 2 * p; if (hitboxes[key].height < 2 * p) hitboxes[key].height = 2 * p; } } return hitboxes; }
+            draw() { /* ... Unchanged ... */ ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = this.lineWidth; const joints = this.getJointPositions(); ctx.strokeStyle = this.getLimbColor('torso'); ctx.beginPath(); ctx.moveTo(joints.neck.x, joints.neck.y); ctx.lineTo(joints.hip.x, joints.hip.y); ctx.stroke(); ctx.fillStyle = this.getLimbColor('head'); ctx.beginPath(); ctx.arc(joints.head.cx, joints.head.cy, joints.head.radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = this.colors.headOutline || '#000'; ctx.stroke(); ctx.strokeStyle = this.getLimbColor('leftUpperArm'); ctx.beginPath(); ctx.moveTo(joints.leftShoulder.x, joints.leftShoulder.y); ctx.lineTo(joints.leftElbow.x, joints.leftElbow.y); ctx.stroke(); ctx.strokeStyle = this.getLimbColor('leftLowerArm'); ctx.beginPath(); ctx.moveTo(joints.leftElbow.x, joints.leftElbow.y); ctx.lineTo(joints.leftHand.x, joints.leftHand.y); ctx.stroke(); ctx.strokeStyle = this.getLimbColor('rightUpperArm'); ctx.beginPath(); ctx.moveTo(joints.rightShoulder.x, joints.rightShoulder.y); ctx.lineTo(joints.rightElbow.x, joints.rightElbow.y); ctx.stroke(); ctx.strokeStyle = this.getLimbColor('rightLowerArm'); ctx.beginPath(); ctx.moveTo(joints.rightElbow.x, joints.rightElbow.y); ctx.lineTo(joints.rightHand.x, joints.rightHand.y); ctx.stroke(); ctx.strokeStyle = this.getLimbColor('leftUpperLeg'); ctx.beginPath(); ctx.moveTo(joints.hip.x, joints.hip.y); ctx.lineTo(joints.leftKnee.x, joints.leftKnee.y); ctx.stroke(); ctx.strokeStyle = this.getLimbColor('leftLowerLeg'); ctx.beginPath(); ctx.moveTo(joints.leftKnee.x, joints.leftKnee.y); ctx.lineTo(joints.leftFoot.x, joints.leftFoot.y); ctx.stroke(); ctx.strokeStyle = this.getLimbColor('rightUpperLeg'); ctx.beginPath(); ctx.moveTo(joints.hip.x, joints.hip.y); ctx.lineTo(joints.rightKnee.x, joints.rightKnee.y); ctx.stroke(); ctx.strokeStyle = this.getLimbColor('rightLowerLeg'); ctx.beginPath(); ctx.moveTo(joints.rightKnee.x, joints.rightKnee.y); ctx.lineTo(joints.rightFoot.x, joints.rightFoot.y); ctx.stroke(); if (this.specialMoveType === 'groundSlam' && this.y >= GROUND_LEVEL - this.height / 2 - 5 && !this.groundSlamImpactDone) { ctx.strokeStyle = 'rgba(100, 100, 100, 0.7)'; ctx.lineWidth = 3; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(this.x, GROUND_LEVEL, (i + 1) * 15, Math.PI, Math.PI * 2); ctx.stroke(); } } ctx.restore(); }
+            
+            solveLegIK(targetX, targetY, isLeftLeg) { 
+                const hipJoint = this.getJointPositions().hip; 
+                const thighLength = this.limbSegmentLength;
+                const shinLength = this.limbSegmentLength;
+                
+                let dx = targetX - hipJoint.x;
+                let dy = targetY - hipJoint.y; 
+                let distSq = dx * dx + dy * dy;
+                let dist = Math.sqrt(distSq);
+
+                const maxReach = thighLength + shinLength - 0.01; // Reduced epsilon slightly
+                if (dist > maxReach) {
+                    dist = maxReach;
+                    const angleToOriginalTarget = Math.atan2(dy, dx);
+                    dx = dist * Math.cos(angleToOriginalTarget); 
+                    dy = dist * Math.sin(angleToOriginalTarget);
+                    distSq = dist * dist; 
+                }
+                const minReach = Math.abs(thighLength - shinLength) + 0.01; // Ensure not exactly on singularity
+                 if (dist < minReach && dist > 0.001 /* avoid division by zero if target is exactly at hip */) { 
+                    dist = minReach;
+                    const angleToOriginalTarget = Math.atan2(dy, dx);
+                    dx = dist * Math.cos(angleToOriginalTarget);
+                    dy = dist * Math.sin(angleToOriginalTarget);
+                    distSq = dist * dist;
+                } else if (dist <= 0.001) { // Target is at the hip, default pose
+                    this.targetAngles[isLeftLeg ? 'leftHipZ' : 'rightHipZ'] = Math.PI / 2; // Point down
+                    this.targetAngles[isLeftLeg ? 'leftKneeZ' : 'rightKneeZ'] = 0.1; // Slightly bent
+                    return;
+                }
+
+
+                const cosKneeAngleNum = thighLength * thighLength + shinLength * shinLength - distSq;
+                const cosKneeAngleDen = 2 * thighLength * shinLength;
+                
+                let kneeAngleRad; 
+                // Ensure denominator is not zero before division
+                if (Math.abs(cosKneeAngleDen) < 0.0001) {
+                     kneeAngleRad = Math.PI; // Fully extended or folded if lengths are equal and dist is 0
+                } else {
+                    const cosKneeAngle = Math.max(-1, Math.min(1, cosKneeAngleNum / cosKneeAngleDen));
+                    kneeAngleRad = Math.acos(cosKneeAngle);
+                }
+                
+                const angleToTarget = Math.atan2(dy, dx);
+                
+                const cosThighAnglePartNum = distSq + thighLength * thighLength - shinLength * shinLength;
+                const cosThighAnglePartDen = 2 * dist * thighLength;
+                let thighAnglePartRad;
+                 if (Math.abs(cosThighAnglePartDen) < 0.0001) { 
+                    thighAnglePartRad = (distSq + thighLength * thighLength - shinLength * shinLength > 0) ? 0 : Math.PI;
+                 } else { 
+                    const cosThighAnglePart = Math.max(-1, Math.min(1, cosThighAnglePartNum / cosThighAnglePartDen)); 
+                    thighAnglePartRad = Math.acos(cosThighAnglePart); 
+                }
+                
+                // Determine preferred bend direction: Knees should bend "forwards"
+                // For a 2D side view, this often means the knee joint is "above" the line connecting hip and foot.
+                // The two solutions for hip angle are angleToTarget - thighAnglePartRad and angleToTarget + thighAnglePartRad.
+                // We need to pick one consistently. If we want the knee to bend "forward" (relative to stickman's upright pose),
+                // we typically choose the solution that makes the knee angle positive when interpreted locally.
+                // Let's assume our angles are such that positive knee angle is forward bend.
+                let hipTargetAngle = angleToTarget - thighAnglePartRad;
+                // A more explicit way to ensure forward knee bend (relative to hip-target line):
+                // If (targetX - hipJoint.x) * (kneeY_solution1 - hipJoint.y) - (targetY - hipJoint.y) * (kneeX_solution1 - hipJoint.x) determines "sidedness"
+                // For now, the default acos for kneeAngleRad (0 to PI) and this hip solution usually works for forward bend.
+                // We might need to flip the sign of kneeAngleRad based on `isLeftLeg` if a specific "inside" or "outside" bend is desired
+                // but for forward, positive is generally fine.
+
+                this.targetAngles[isLeftLeg ? 'leftHipZ' : 'rightHipZ'] = hipTargetAngle;
+                this.targetAngles[isLeftLeg ? 'leftKneeZ' : 'rightKneeZ'] = Math.max(MIN_KNEE_ANGLE, Math.min(MAX_KNEE_ANGLE, kneeAngleRad));
+            }
+
+
+            updateTargetAngles() { 
+                const dir = this.facingRight ? 1 : -1; 
+                let baseArmAngle = Math.PI / 4; 
+                let baseElbowAngle = Math.PI / 3; 
+                let baseHipAngle = Math.PI / 2.5; // Slightly more upright for idle base
+                let baseKneeAngle = Math.PI / 6;  // Less bent for idle base
+
+                this.targetAngles.leftShoulderZ = baseArmAngle; this.targetAngles.leftElbowZ = baseElbowAngle;
+                this.targetAngles.rightShoulderZ = baseArmAngle; 
+                this.targetAngles.rightElbowZ = baseElbowAngle;
+                this.targetAngles.leftHipZ = baseHipAngle; this.targetAngles.leftKneeZ = baseKneeAngle;
+                this.targetAngles.rightHipZ = baseHipAngle; this.targetAngles.rightKneeZ = baseKneeAngle;
+
+                if (this.activeProceduralAnimation) { /* ... Unchanged ... */ const anim = this.activeProceduralAnimation; const elapsedTime = Date.now() - anim.startTime; let t = Math.min(elapsedTime / anim.duration, 1); let easedT = easeInOutQuad(t); if (anim.type === 'punch') { const attackingShoulder = this.facingRight ? 'rightShoulderZ' : 'leftShoulderZ'; const attackingElbow = this.facingRight ? 'rightElbowZ' : 'leftElbowZ'; const nonAttackingShoulder = this.facingRight ? 'leftShoulderZ' : 'rightShoulderZ'; const nonAttackingElbow = this.facingRight ? 'leftElbowZ' : 'rightElbowZ'; let strikeTargetShoulder, strikeTargetElbow; let recoilTargetShoulder, recoilTargetElbow; if (this.facingRight) { strikeTargetShoulder = -0.1; strikeTargetElbow = 0.1; recoilTargetShoulder = baseArmAngle; recoilTargetElbow = baseElbowAngle; } else { strikeTargetShoulder = 0.1; strikeTargetElbow = 0.1; recoilTargetShoulder = baseArmAngle; recoilTargetElbow = baseElbowAngle; } if (t < 0.25) { this.targetAngles[attackingShoulder] = angleLerp(anim.startAngles[attackingShoulder], baseArmAngle * 1.3, easedT * 4); this.targetAngles[attackingElbow] = angleLerp(anim.startAngles[attackingElbow], baseElbowAngle * 0.5, easedT * 4); } else if (t < 0.65) { let extendProgress = (t - 0.25) / 0.40; this.targetAngles[attackingShoulder] = angleLerp(this.targetAngles[attackingShoulder], strikeTargetShoulder, easeInOutQuad(extendProgress)); this.targetAngles[attackingElbow] = angleLerp(this.targetAngles[attackingElbow], strikeTargetElbow, easeInOutQuad(extendProgress)); } else { let recoilProgress = (t - 0.65) / 0.35; this.targetAngles[attackingShoulder] = angleLerp(this.targetAngles[attackingShoulder], recoilTargetShoulder, easeInOutQuad(recoilProgress)); this.targetAngles[attackingElbow] = angleLerp(this.targetAngles[attackingElbow], recoilTargetElbow, easeInOutQuad(recoilProgress)); } this.targetAngles[nonAttackingShoulder] = baseArmAngle * 0.8; this.targetAngles[nonAttackingElbow] = baseElbowAngle * 1.1; } if (anim.type === 'kick') { const attackingHip = this.facingRight ? 'rightHipZ' : 'leftHipZ'; const attackingKnee = this.facingRight ? 'rightKneeZ' : 'leftKneeZ'; const nonAttackingHip = this.facingRight ? 'leftHipZ' : 'rightHipZ'; const nonAttackingKnee = this.facingRight ? 'leftKneeZ' : 'rightKneeZ'; let strikeTargetHip, strikeTargetKnee; let recoilTargetHip, recoilTargetKnee; if (this.facingRight) { strikeTargetHip = -0.1; strikeTargetKnee = 0.05; recoilTargetHip = baseHipAngle; recoilTargetKnee = baseKneeAngle; } else { strikeTargetHip = 0.1; strikeTargetKnee = 0.05; recoilTargetHip = baseHipAngle; recoilTargetKnee = baseKneeAngle; } if (t < 0.20) { this.targetAngles[attackingHip] = angleLerp(anim.startAngles[attackingHip], baseHipAngle * 0.4, easedT * 5); this.targetAngles[attackingKnee] = angleLerp(anim.startAngles[attackingKnee], baseKneeAngle * 1.6 , easedT * 5); } else if (t < 0.65) { let extendProgress = (t - 0.20) / 0.45; this.targetAngles[attackingHip] = angleLerp(this.targetAngles[attackingHip], strikeTargetHip, easeInOutQuad(extendProgress)); this.targetAngles[attackingKnee] = angleLerp(this.targetAngles[attackingKnee], strikeTargetKnee, easeInOutQuad(extendProgress)); } else { let recoilProgress = (t - 0.65) / 0.35; this.targetAngles[attackingHip] = angleLerp(strikeTargetHip, recoilTargetHip, easeInOutQuad(recoilProgress)); this.targetAngles[attackingKnee] = angleLerp(strikeTargetKnee, recoilTargetKnee, easeInOutQuad(recoilProgress)); } this.targetAngles[nonAttackingHip] = baseHipAngle * 0.9; this.targetAngles[nonAttackingKnee] = baseKneeAngle * 1.1; } if (t >= 1) { this.activeProceduralAnimation = null; this.targetAngles.leftShoulderZ = baseArmAngle; this.targetAngles.leftElbowZ = baseElbowAngle; this.targetAngles.rightShoulderZ = baseArmAngle; this.targetAngles.rightElbowZ = baseElbowAngle; this.targetAngles.leftHipZ = baseHipAngle; this.targetAngles.leftKneeZ = baseKneeAngle; this.targetAngles.rightHipZ = baseHipAngle; this.targetAngles.rightKneeZ = baseKneeAngle; } return; } 
+                if (this.isDodging) { /* ... Unchanged ... */ this.targetAngles.leftShoulderZ = Math.PI / 1.5; this.targetAngles.leftElbowZ = Math.PI / 1.5; this.targetAngles.rightShoulderZ = Math.PI / 1.5; this.targetAngles.rightElbowZ = Math.PI / 1.5; this.targetAngles.leftHipZ = Math.PI / 1.8; this.targetAngles.leftKneeZ = Math.PI / 1.8; this.targetAngles.rightHipZ = Math.PI / 1.8; this.targetAngles.rightKneeZ = Math.PI / 1.8; } 
+                else if (this.isParrying) { /* ... Unchanged ... */ if (this.facingRight) { this.targetAngles.rightShoulderZ = -Math.PI / 10; this.targetAngles.rightElbowZ = Math.PI / 7; this.targetAngles.leftShoulderZ = Math.PI / 6; this.targetAngles.leftElbowZ = Math.PI / 2.5; } else { this.targetAngles.leftShoulderZ = Math.PI / 10; this.targetAngles.leftElbowZ = Math.PI / 7; this.targetAngles.rightShoulderZ = -Math.PI / 6; this.targetAngles.rightElbowZ = Math.PI / 2.5; } } 
+                else if (this.hitStunTimer > 0) { /* ... Unchanged ... */ this.targetAngles.leftShoulderZ = Math.PI / 2; this.targetAngles.leftElbowZ = Math.PI / 1.5; this.targetAngles.rightShoulderZ = Math.PI / 2; this.targetAngles.rightElbowZ = Math.PI / 1.5; this.targetAngles.leftHipZ = Math.PI / 3; this.targetAngles.leftKneeZ = Math.PI / 3; this.targetAngles.rightHipZ = Math.PI / 3; this.targetAngles.rightKneeZ = Math.PI / 3; } 
+                else if (this.isGuarding) { /* ... Unchanged ... */ this.targetAngles.leftShoulderZ = Math.PI / 2.2; this.targetAngles.leftElbowZ = Math.PI / 2.5; this.targetAngles.rightShoulderZ = -Math.PI / 2.2; this.targetAngles.rightElbowZ = Math.PI / 2.5; } 
+                else if (this.isPerformingSpecialMove) { /* ... Unchanged ... */ const currentAttack = this.specialMoveType; const isLeftAttack = !this.facingRight; if (currentAttack === 'flyingKick') { if (isLeftAttack) { this.targetAngles.leftHipZ = -Math.PI / 7; this.targetAngles.leftKneeZ = 0.1; this.targetAngles.leftShoulderZ = 0.1; this.targetAngles.leftElbowZ = 0.1; } else { this.targetAngles.rightHipZ = Math.PI / 7; this.targetAngles.rightKneeZ = 0.1; this.targetAngles.rightShoulderZ = -0.1; this.targetAngles.rightElbowZ = 0.1; } } else if (currentAttack === 'groundSlam') { this.targetAngles.leftHipZ = Math.PI / 1.8; this.targetAngles.leftKneeZ = Math.PI / 1.5; this.targetAngles.rightHipZ = Math.PI / 1.8; this.targetAngles.rightKneeZ = Math.PI / 1.5; } } 
+                else if (Math.abs(this.velocityX) > 0.01 && !this.isJumping) { // Walking or Running
+                    const currentRunMultiplier = this.isRunning ? RUN_CYCLE_MULTIPLIER : 1;
+                    const currentCycleFreq = WALK_CYCLE_FREQUENCY * currentRunMultiplier;
+                    const currentArmAmp = WALK_ARM_SWING_AMPLITUDE * currentRunMultiplier;
+
+                    this.walkCycleTime += currentCycleFreq * (Math.abs(this.velocityX) / (this.isRunning ? MAX_RUN_SPEED : MAX_WALK_SPEED)); 
+                    
+                    const strideLengthFactor = this.isRunning ? 0.7 : 0.55; // Relative to limb length
+                    const footClearance = this.limbSegmentLength * (this.isRunning ? 0.35 : 0.25); 
+
+                    const actualMovementDir = Math.sign(this.velocityX);
+                    const isMovingForward = (this.facingRight && actualMovementDir >= 0) || (!this.facingRight && actualMovementDir <= 0);
+                    
+                    // Determine which foot is "planted" (support) and which is "swinging"
+                    // This is a simplified way to determine support leg: the one moving "less" forward in this part of the cycle
+                    const cyclePos = Math.sin(this.walkCycleTime); // Ranges -1 to 1
+                    let leftIsSupport = cyclePos < 0; // Arbitrary rule: if sin is negative, left is support-ish
+                    if (!isMovingForward) leftIsSupport = !leftIsSupport; // Swap for backpedal
+
+
+                    if (isMovingForward) {
+                        let leftFootTargetX, rightFootTargetX;
+                        if (leftIsSupport && this.leftFootPlantedX !== null) {
+                            leftFootTargetX = this.leftFootPlantedX - (this.x - this.prevX); // Keep world X same relative to ground by adjusting for body movement
+                        } else {
+                            leftFootTargetX = this.x + dir * this.limbSegmentLength * strideLengthFactor * Math.sin(this.walkCycleTime);
+                            this.leftFootPlantedX = null; // It's swinging
+                        }
+                        if (!leftIsSupport && this.rightFootPlantedX !== null) {
+                             rightFootTargetX = this.rightFootPlantedX - (this.x - this.prevX);
+                        } else {
+                            rightFootTargetX = this.x + dir * this.limbSegmentLength * strideLengthFactor * Math.sin(this.walkCycleTime + Math.PI);
+                            this.rightFootPlantedX = null; // It's swinging
+                        }
+                        // On "plant" (e.g., when foot reaches its forward-most X in cycle)
+                        if (Math.abs(Math.sin(this.walkCycleTime) - 1) < 0.1 && this.leftFootPlantedX === null) this.leftFootPlantedX = leftFootTargetX;
+                        if (Math.abs(Math.sin(this.walkCycleTime + Math.PI) -1) < 0.1 && this.rightFootPlantedX === null) this.rightFootPlantedX = rightFootTargetX;
+
+
+                        const leftFootLiftPhase = Math.sin(this.walkCycleTime + Math.PI / 2); 
+                        const rightFootLiftPhase = Math.sin(this.walkCycleTime + Math.PI + Math.PI / 2);
+                        const leftFootTargetY = GROUND_LEVEL - FOOT_TARGET_Y_OFFSET - (leftFootLiftPhase > 0 && !leftIsSupport ? leftFootLiftPhase * footClearance : 0);
+                        const rightFootTargetY = GROUND_LEVEL - FOOT_TARGET_Y_OFFSET - (rightFootLiftPhase > 0 && leftIsSupport ? rightFootLiftPhase * footClearance : 0);
+                        
+                        this.solveLegIK(leftFootTargetX, leftFootTargetY, true); 
+                        this.solveLegIK(rightFootTargetX, rightFootTargetY, false);
+                        
+                        this.targetAngles.leftShoulderZ = currentArmAmp * Math.sin(this.walkCycleTime + Math.PI);
+                        this.targetAngles.leftElbowZ = Math.PI / 3.5 + currentArmAmp * 0.4 * Math.sin(this.walkCycleTime + Math.PI * 1.5);
+                        this.targetAngles.rightShoulderZ = currentArmAmp * Math.sin(this.walkCycleTime); 
+                        this.targetAngles.rightElbowZ = Math.PI / 3.5 + currentArmAmp * 0.3 * Math.sin(this.walkCycleTime + Math.PI * 0.5);
+                    } else { // Moving Backward (Backpedal) 
+                        const backStrideFactor = 0.30 * (this.isRunning ? 1.2 : 1);
+                        const backFootClearance = this.limbSegmentLength * 0.1;
+                        
+                        let leftFootTargetX, rightFootTargetX;
+                         if (leftIsSupport && this.leftFootPlantedX !== null) {
+                            leftFootTargetX = this.leftFootPlantedX - (this.x - this.prevX);
+                        } else {
+                            leftFootTargetX = this.x - dir * this.limbSegmentLength * backStrideFactor * Math.sin(this.walkCycleTime + Math.PI); 
+                            this.leftFootPlantedX = null;
+                        }
+                        if (!leftIsSupport && this.rightFootPlantedX !== null) {
+                             rightFootTargetX = this.rightFootPlantedX - (this.x - this.prevX);
+                        } else {
+                            rightFootTargetX = this.x - dir * this.limbSegmentLength * backStrideFactor * Math.sin(this.walkCycleTime);
+                            this.rightFootPlantedX = null;
+                        }
+                        if (Math.abs(Math.sin(this.walkCycleTime + Math.PI) - 1) < 0.1 && this.leftFootPlantedX === null) this.leftFootPlantedX = leftFootTargetX;
+                        if (Math.abs(Math.sin(this.walkCycleTime) -1) < 0.1 && this.rightFootPlantedX === null) this.rightFootPlantedX = rightFootTargetX;
+
+
+                        const leftFootLiftPhase = Math.sin(this.walkCycleTime + Math.PI + Math.PI / 2); 
+                        const rightFootLiftPhase = Math.sin(this.walkCycleTime + Math.PI / 2);
+                        const leftFootTargetY = GROUND_LEVEL - FOOT_TARGET_Y_OFFSET - (leftFootLiftPhase > 0 && !leftIsSupport ? leftFootLiftPhase * backFootClearance : 0);
+                        const rightFootTargetY = GROUND_LEVEL - FOOT_TARGET_Y_OFFSET - (rightFootLiftPhase > 0 && leftIsSupport ? rightFootLiftPhase * backFootClearance : 0);
+                        this.solveLegIK(leftFootTargetX, leftFootTargetY, true); 
+                        this.solveLegIK(rightFootTargetX, rightFootTargetY, false);
+                        this.targetAngles.leftShoulderZ = baseArmAngle * 0.6; this.targetAngles.leftElbowZ = baseElbowAngle * 0.9;
+                        this.targetAngles.rightShoulderZ = baseArmAngle * 0.6; this.targetAngles.rightElbowZ = baseElbowAngle * 0.9;
+                    }
+                } else if (!this.isJumping) { // Idle - feet grounded
+                    const idleFootOffsetX = this.limbSegmentLength * 0.20 * dir; 
+                    this.solveLegIK(this.x - idleFootOffsetX, GROUND_LEVEL - FOOT_TARGET_Y_OFFSET, true);
+                    this.solveLegIK(this.x + idleFootOffsetX, GROUND_LEVEL - FOOT_TARGET_Y_OFFSET, false);
+                    this.leftFootPlantedX = this.x - idleFootOffsetX; // Ensure planted X is updated for idle
+                    this.rightFootPlantedX = this.x + idleFootOffsetX;
+
+                    this.targetAngles.leftShoulderZ = baseArmAngle + 0.1 * Math.sin(Date.now() / 800);
+                    this.targetAngles.rightShoulderZ = baseArmAngle + 0.1 * Math.sin(Date.now() / 800 + Math.PI / 3);
+                    this.targetAngles.leftElbowZ = baseElbowAngle;
+                    this.targetAngles.rightElbowZ = baseElbowAngle;
+                }
+                 this.prevX = this.x; // Store current x for next frame's foot planting calculation
+            }
+
+
+            update(opponent) { 
+                const delta = 1000 / 60; 
+                const effectiveFriction = this.isJumping ? AIR_FRICTION : PLAYER_FRICTION;
+                let currentMaxSpeed = this.isRunning ? MAX_RUN_SPEED : MAX_WALK_SPEED;
+                let currentAcceleration = BASE_PLAYER_ACCELERATION * (this.isRunning ? RUN_ACCELERATION_MULTIPLIER : 1) / this.mass;
+
+                if (this.hitStunTimer > 0) this.hitStunTimer -= delta; 
+                if (this.dodgeTimer > 0) this.dodgeTimer -= delta; else this.isDodging = false; 
+                if (this.dodgeCooldownTimer > 0) this.dodgeCooldownTimer -= delta; 
+                if (this.parryTimer > 0) this.parryTimer -= delta; else this.isParrying = false; 
+                if (this.parryCooldownTimer > 0) this.parryCooldownTimer -= delta; 
+                if (this.parryFailedVulnTimer > 0) this.parryFailedVulnTimer -= delta;
+                Object.values(this.limbs).forEach(limb => { if (limb.impairedTimer > 0) limb.impairedTimer -= delta; });
+                
+                this.updateTargetAngles(); 
+                
+                for (const joint in this.currentAngles) { this.currentAngles[joint] = angleLerp(this.currentAngles[joint], this.targetAngles[joint], (this.activeProceduralAnimation ? ANIMATION_LERP_RATE : LERP_RATE) ); }
+                this.currentAngles.leftElbowZ = Math.max(MIN_ELBOW_ANGLE, Math.min(MAX_ELBOW_ANGLE, this.currentAngles.leftElbowZ)); this.currentAngles.rightElbowZ = Math.max(MIN_ELBOW_ANGLE, Math.min(MAX_ELBOW_ANGLE, this.currentAngles.rightElbowZ)); this.currentAngles.leftKneeZ = Math.max(MIN_KNEE_ANGLE, Math.min(MAX_KNEE_ANGLE, this.currentAngles.leftKneeZ)); this.currentAngles.rightKneeZ = Math.max(MIN_KNEE_ANGLE, Math.min(MAX_KNEE_ANGLE, this.currentAngles.rightKneeZ));
+
+                if (this.limbs.leftLowerLeg.impairedTimer > 0 || this.limbs.rightLowerLeg.impairedTimer > 0 || this.limbs.leftUpperLeg.impairedTimer > 0 || this.limbs.rightUpperLeg.impairedTimer > 0) { 
+                    currentMaxSpeed *= LIMB_IMPAIR_SPEED_REDUCTION; 
+                }
+
+                if (this.hitStunTimer > 0 || this.parryFailedVulnTimer > 0 || this.isDodging) { 
+                    if(this.isDodging){} 
+                    else { this.velocityX *= (1 - effectiveFriction * 2); if (Math.abs(this.velocityX) < 0.1) this.velocityX = 0; }
+                } else if (this.isNPC && gameActive) { 
+                    this.aiActionCooldown -= delta; 
+                    if (this.aiActionCooldown <= 0) this.aiDecideAction(opponent); 
+                    this.aiExecuteAction(opponent, currentMaxSpeed); 
+                } else if (!this.isNPC) { 
+                    this.isRunning = keysPressed[this.controls.run]; 
+                    const intendedDirX = keysPressed[this.controls.left] ? -1 : (keysPressed[this.controls.right] ? 1 : 0);
+                    if (this.canChangeFacing()) { 
+                        if (intendedDirX === -1 ) this.facingRight = false; 
+                        else if (intendedDirX === 1) this.facingRight = true;
+                    }
+
+                    if (keysPressed[this.controls.guard] && this.canAct()) { this.isGuarding = true; this.velocityX *= (1 - PLAYER_FRICTION * 2); } else { this.isGuarding = false; } 
+                    
+                    if (this.canMove()) { 
+                        if (intendedDirX !== 0) {
+                            if (intendedDirX === 1) this.velocityX = Math.min(this.velocityX + currentAcceleration, currentMaxSpeed);
+                            else this.velocityX = Math.max(this.velocityX - currentAcceleration, -currentMaxSpeed);
+                        } else { 
+                            if (this.velocityX > 0) this.velocityX = Math.max(0, this.velocityX - effectiveFriction); 
+                            else if (this.velocityX < 0) this.velocityX = Math.min(0, this.velocityX + effectiveFriction); 
+                        } 
+                    } else if (this.isGuarding || this.isParrying) { 
+                        if (this.velocityX > 0) this.velocityX = Math.max(0, this.velocityX - PLAYER_FRICTION); else if (this.velocityX < 0) this.velocityX = Math.min(0, this.velocityX + PLAYER_FRICTION);
+                    } else if (this.activeProceduralAnimation) { 
+                        this.velocityX *= (1 - effectiveFriction * 0.7); 
+                    }
+                }
+                this.x += this.velocityX; 
+                obstacles.forEach(obstacle => { const nextXRect = { x: this.x + this.velocityX - this.width / 2, y: this.y - this.height, width: this.width, height: this.height }; if (checkRectCollision(nextXRect, obstacle)) { if (this.velocityX > 0) { this.x = obstacle.x - this.width / 2; } else if (this.velocityX < 0) { this.x = obstacle.x + obstacle.width + this.width / 2; } this.velocityX = 0; } });
+                const rect1 = { x: this.x - this.width / 2, y: this.y - this.height, width: this.width, height: this.height }; 
+                const rect2 = { x: opponent.x - opponent.width / 2, y: opponent.y - opponent.height, width: opponent.width, height: opponent.height }; 
+                if (rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y) {  const overlapX = (rect1.x + rect1.width / 2 < rect2.x + rect2.width / 2) ? (rect1.x + rect1.width) - rect2.x : (rect2.x + rect2.width) - rect1.x;  const totalMass = this.mass + opponent.mass; const thisPushFactor = opponent.mass / totalMass; const opponentPushFactor = this.mass / totalMass; if (rect1.x + rect1.width / 2 < rect2.x + rect2.width / 2) {  this.x -= overlapX * thisPushFactor;  opponent.x += overlapX * opponentPushFactor; if(this.velocityX > 0) this.velocityX *= -0.3 / this.mass;  if(opponent.velocityX < 0) opponent.velocityX *= -0.3 / opponent.mass; } else {  this.x += overlapX * thisPushFactor;  opponent.x -= overlapX * opponentPushFactor; if(this.velocityX < 0) this.velocityX *= -0.3 / this.mass; if(opponent.velocityX > 0) opponent.velocityX *= -0.3 / opponent.mass; }  }  this.x = Math.max(this.width / 2, Math.min(CANVAS_WIDTH - this.width / 2, this.x)); opponent.x = Math.max(opponent.width / 2, Math.min(CANVAS_WIDTH - opponent.width / 2, opponent.x));  
+                const prevY = this.y; this.y += this.velocityY; 
+                obstacles.forEach(obstacle => { const nextYRect = { x: this.x - this.width / 2, y: this.y - this.height + this.velocityY, width: this.width, height: this.height }; if (checkRectCollision(nextYRect, obstacle)) { if (this.velocityY > 0) { this.y = obstacle.y - this.height/2; this.isJumping = false; } else if (this.velocityY < 0) { this.y = obstacle.y + obstacle.height + this.height/2; } this.velocityY = 0; } }); 
+                if (this.y + this.height / 2 > GROUND_LEVEL) { this.y = GROUND_LEVEL - this.height / 2; if (this.velocityY > 1) this.velocityY = 0; this.isJumping = false; if (this.specialMoveType === 'groundSlam' && !this.groundSlamImpactDone) this.handleGroundSlamImpact(opponent); }   
+                else { this.velocityY += currentGravity; }  
+                for (let i = powerUps.length - 1; i >= 0; i--) { const pu = powerUps[i]; if (pu.active) { const dist = Math.sqrt(Math.pow(this.x - pu.x, 2) + Math.pow((this.y - this.height / 2) - pu.y, 2));  if (dist < this.width / 2 + pu.radius) {  if (pu.type === 'health') { this.health = Math.min(PLAYER_HEALTH_MAX, this.health + HEALTH_POWERUP_AMOUNT); updateHealthBars();  } pu.active = false;  } } } 
+                if (this.isAttacking || this.isPerformingSpecialMove) {  if (!this.activeProceduralAnimation) {  this.attackTimer -= delta;  if (this.attackTimer <= 0) { this.isAttacking = false; this.attackType = null; this.isPerformingSpecialMove = false; this.specialMoveType = null; this.groundSlamImpactDone = false; } } } 
+                if (!this.isNPC && keysPressed[this.controls.jump] && !this.isJumping && this.canAct()) this.jump(this.limbs.leftLowerLeg.impairedTimer > 0 || this.limbs.rightLowerLeg.impairedTimer > 0 || this.limbs.leftUpperLeg.impairedTimer > 0 || this.limbs.rightUpperLeg.impairedTimer > 0 ? JUMP_FORCE * LIMB_IMPAIR_JUMP_REDUCTION : JUMP_FORCE);
+            }
+            canAct() { return this.hitStunTimer <= 0 && this.parryFailedVulnTimer <= 0 && !this.isDodging && !this.isParrying && !this.isAttacking && !this.isPerformingSpecialMove && !this.activeProceduralAnimation; }
+            canMove() { return !this.isGuarding && !this.isParrying && !(this.isPerformingSpecialMove && this.specialMoveType === 'groundSlam') && !this.activeProceduralAnimation && this.hitStunTimer <=0 && this.parryFailedVulnTimer <= 0 && !this.isDodging; }
+            canChangeFacing() { return !this.isAttacking && !this.isPerformingSpecialMove && !this.activeProceduralAnimation && this.hitStunTimer <= 0 && this.parryFailedVulnTimer <= 0 && !this.isParrying && !this.isDodging && !this.isGuarding; }
+            aiDecideAction(opponent) { /* ... Unchanged ... */ const distanceX = opponent.x - this.x; const absDistanceX = Math.abs(distanceX); let decisionIntervalModifier = 1, attackP = this.aiBaseAttackProb, guardP = this.aiBaseGuardProb; let jumpP = this.aiBaseJumpProb, parryP = this.aiBaseParryProb, aggression = this.aiAggression; if (this.archetype === 'CounterStriker') { aggression = 0.3; parryP *= 2.5; guardP *= 2; attackP *= 0.7; this.aiPreferredDistance = KICK_RANGE * 0.9; } else if (this.archetype === 'Brawler') { aggression = 0.8; parryP *= 0.3; guardP *= 0.5; attackP *= 1.5; this.aiPreferredDistance = PUNCH_RANGE * 0.7; } if (selectedAIDifficulty === 'Easy') {  decisionIntervalModifier = 1.8; attackP *= 0.5; guardP *= 0.5; jumpP *= 0.5; parryP *= 0.3; aggression *= 0.5; } else if (selectedAIDifficulty === 'Hard') {  decisionIntervalModifier = 0.6; attackP *= 1.5; guardP *= 1.5; jumpP *= 1.5; parryP *= 1.8; aggression *= 1.3; } this.aiActionCooldown = this.aiDecisionIntervalBase * decisionIntervalModifier * (0.8 + Math.random() * 0.4); this.aiTargetX = null; this.aiWantsToAttack = null; this.aiWantsToGuard = false; this.aiWantsToJump = false; this.aiWantsToParry = false; const opponentIsActuallyAttacking = opponent.isAttacking && opponent.attackTimer > ATTACK_DURATION * 0.2 && opponent.attackTimer < ATTACK_DURATION * 0.8; if (opponentIsActuallyAttacking) {  const facingOpponentCorrectly = (this.facingRight && distanceX > 0) || (!this.facingRight && distanceX < 0); const inEffectiveRange = absDistanceX < (opponent.attackType === 'punch' ? PUNCH_RANGE : KICK_RANGE) * 1.1; if (facingOpponentCorrectly && inEffectiveRange) { if (this.parryCooldownTimer <= 0 && Math.random() < parryP) { this.aiWantsToParry = true; return; } else if (Math.random() < guardP) { this.aiWantsToGuard = true; return; } } } const canAttackPlayer = !opponent.isGuarding && !opponent.isParrying && opponent.hitStunTimer <= 0 && !opponent.isDodging; if (absDistanceX < this.aiPreferredDistance + 30 && canAttackPlayer && Math.random() < attackP) { if (this.comboState.count === 1 && this.comboState.lastAttackType === 'punch' && Date.now() - this.comboState.lastAttackTime < COMBO_WINDOW && selectedAIDifficulty !== 'Easy' && Math.random() < 0.7) { this.aiWantsToAttack = (selectedAIDifficulty === 'Hard' && Math.random() < 0.5 && this.archetype === 'Brawler') ? 'kick' : 'punch';  } else { this.aiWantsToAttack = (absDistanceX < PUNCH_RANGE * 0.8 && Math.random() < (this.archetype === 'Brawler' ? 0.85 : 0.55)) ? 'punch' : 'kick'; } if (this.aiWantsToAttack) { this.facingRight = distanceX > 0; return; } } if (Math.random() < jumpP && !this.isJumping) this.aiWantsToJump = true; if (Math.random() < aggression) {  if (absDistanceX > this.aiPreferredDistance) this.aiTargetX = opponent.x;  else if (absDistanceX < this.aiPreferredDistance * 0.5 && this.archetype !== 'Brawler') this.aiTargetX = this.x - Math.sign(distanceX) * (KICK_RANGE * 0.3);  } else {  if (absDistanceX < this.aiPreferredDistance * 0.8) this.aiTargetX = this.x - Math.sign(distanceX) * (KICK_RANGE * 0.5);  else if (absDistanceX > this.aiPreferredDistance * 1.2 || Math.random() < 0.25) {  this.aiTargetX = this.x + (Math.random() < 0.5 ? -1 : 1) * (KICK_RANGE * (0.2 + Math.random() * 0.4) ); } } }
+            aiExecuteAction(opponent, currentMaxSpeed = MAX_PLAYER_SPEED) { /* ... Unchanged ... */ if (this.hitStunTimer > 0 || this.parryFailedVulnTimer > 0) return;  if (this.aiWantsToParry && this.parryCooldownTimer <= 0) { this.initiateParry(); this.aiWantsToParry = false; return; } this.isGuarding = this.aiWantsToGuard && !this.isJumping && !this.isParrying; if (this.isGuarding) { this.velocityX *= (1 - PLAYER_FRICTION * 2); return; } if (this.aiWantsToJump && !this.isJumping) { this.jump(); this.aiWantsToJump = false; } let archetypeSpeedMultiplier = 1.0; if (this.archetype === 'Brawler') archetypeSpeedMultiplier = 1.2; else if (this.archetype === 'CounterStriker') archetypeSpeedMultiplier = 0.85; const finalMaxSpeed = currentMaxSpeed * archetypeSpeedMultiplier; const finalAcceleration = (BASE_PLAYER_ACCELERATION / this.mass) * archetypeSpeedMultiplier; if (this.aiTargetX !== null && !this.isAttacking && !this.isPerformingSpecialMove) { const targetDirection = Math.sign(this.aiTargetX - this.x); if (Math.abs(this.aiTargetX - this.x) > finalMaxSpeed * 0.5) {  this.velocityX = Math.min(finalMaxSpeed, Math.max(-finalMaxSpeed, this.velocityX + targetDirection * finalAcceleration )); this.facingRight = targetDirection > 0; } else { this.velocityX *= (1 - PLAYER_FRICTION); if (Math.abs(this.velocityX) < 0.5) this.velocityX = 0; this.aiTargetX = null; } } else if (!this.isAttacking && !this.isPerformingSpecialMove) {  if (this.velocityX > 0) this.velocityX = Math.max(0, this.velocityX - PLAYER_FRICTION); else if (this.velocityX < 0) this.velocityX = Math.min(0, this.velocityX + PLAYER_FRICTION); } if (this.aiWantsToAttack && this.canAct()) { if ((opponent.x > this.x && !this.facingRight) || (opponent.x < this.x && this.facingRight)) this.facingRight = !this.facingRight; this.initiateAttack(this.aiWantsToAttack, opponent); this.aiWantsToAttack = null; } }
+            jump(force = JUMP_FORCE) {  if (!this.isJumping) { this.velocityY = force; this.isJumping = true; } }
+            initiateAttack(type, opponent) { /* ... Unchanged ... */ if (!this.canAct()) return; const currentTime = Date.now(); if (currentTime - this.comboState.lastHitTime > COMBO_WINDOW * 1.5) { this.comboState.count = 0; this.comboState.lastAttackType = null; } let canCombo = false; if (this.comboState.count === 0) canCombo = true; else if (this.comboState.count === 1 && this.comboState.lastAttackType === 'punch' && type === 'punch' && (currentTime - this.comboState.lastAttackTime < COMBO_WINDOW)) canCombo = true; else if (this.comboState.count === 2 && this.comboState.lastAttackType === 'punch' && type === 'kick' && (currentTime - this.comboState.lastAttackTime < COMBO_WINDOW)) canCombo = true; else { this.comboState.count = 0; canCombo = true; } if (!canCombo) this.comboState.count = 0; if (this.isJumping && !this.isNPC) {  if (type === 'punch') { this.isPerformingSpecialMove = true; this.specialMoveType = 'flyingKick'; this.attackTimer = SPECIAL_ATTACK_DURATION; this.velocityY = JUMP_FORCE / 2.5; this.performHitDetection(opponent, type); return; }  } else if (this.isJumping && this.isNPC && type === 'flyingKick') {  this.isPerformingSpecialMove = true; this.specialMoveType = 'flyingKick'; this.attackTimer = SPECIAL_ATTACK_DURATION; this.velocityY = JUMP_FORCE / 2.5; this.performHitDetection(opponent, type); return; } this.isAttacking = true; this.attackType = type; this.attackTimer = ATTACK_DURATION;  this.activeProceduralAnimation = { type: type, startTime: Date.now(), duration: ATTACK_DURATION * 0.8, startAngles: { ...this.currentAngles }, }; this.performHitDetection(opponent, type);  this.comboState.lastAttackType = type; this.comboState.lastAttackTime = currentTime; }
+            initiateSpecialMove(type, opponent) { /* ... Unchanged ... */ if (!this.canAct()) return; if (type === 'groundSlam' && this.isJumping) { this.isPerformingSpecialMove = true; this.specialMoveType = 'groundSlam'; this.velocityY = GROUND_SLAM_FORCE; this.attackTimer = SPECIAL_ATTACK_DURATION * 1.5; this.groundSlamImpactDone = false; return; } }
+            initiateAirDodge(dx, dy) { /* ... Unchanged ... */ if (!this.isJumping || this.dodgeCooldownTimer > 0 || !this.canAct()) return; this.isDodging = true; this.isGuarding = false; this.isParrying = false; this.isAttacking = false; this.isPerformingSpecialMove = false; this.dodgeTimer = AIR_DODGE_DURATION; this.dodgeCooldownTimer = AIR_DODGE_COOLDOWN; let magnitude = Math.sqrt(dx*dx + dy*dy); if (magnitude === 0) { dx = this.facingRight ? 0.5 : -0.5; dy = -0.5; magnitude = Math.sqrt(dx*dx + dy*dy); } this.velocityX = (dx / magnitude) * AIR_DODGE_FORCE; this.velocityY = (dy / magnitude) * AIR_DODGE_FORCE * 0.7; }
+            initiateParry() { /* ... Unchanged ... */ if (this.parryCooldownTimer > 0 || !this.canAct() || this.isJumping) return; this.isParrying = true; this.isGuarding = false;  this.parryTimer = PARRY_DURATION; this.parryCooldownTimer = PARRY_COOLDOWN; this.velocityX *= 0.3;  }
+            performHitDetection(opponent, attackTypeOfThisHit) { /* ... Unchanged ... */ let range, damage, attackMidY, knockbackMultiplier = 1;  const currentMove = this.isPerformingSpecialMove ? this.specialMoveType : this.attackType;  let hitStun = HIT_STUN_DURATION_LIGHT; let actualDamage = 0; let attackerLimbName = null;  switch(currentMove) { case 'punch': range = PUNCH_RANGE; damage = PUNCH_DAMAGE; attackerLimbName = this.facingRight ? 'rightArm' : 'leftArm';  if (this.limbs.rightUpperArm.impairedTimer > 0 || this.limbs.rightLowerArm.impairedTimer > 0 && this.facingRight || this.limbs.leftUpperArm.impairedTimer > 0 || this.limbs.leftLowerArm.impairedTimer > 0 && !this.facingRight) damage *= 0.6; break; case 'kick':  range = KICK_RANGE; damage = KICK_DAMAGE; hitStun = HIT_STUN_DURATION_LIGHT * 1.2;  attackerLimbName = this.facingRight ? 'rightLeg' : 'leftLeg'; if (this.limbs.rightUpperLeg.impairedTimer > 0 || this.limbs.rightLowerLeg.impairedTimer > 0 && this.facingRight || this.limbs.leftUpperLeg.impairedTimer > 0 || this.limbs.leftLowerLeg.impairedTimer > 0 && !this.facingRight) damage *= 0.6; break; case 'flyingKick':  range = FLYING_KICK_RANGE; damage = FLYING_KICK_DAMAGE; knockbackMultiplier = KNOCKBACK_SPECIAL_MULTIPLIER * 0.8; hitStun = HIT_STUN_DURATION_HEAVY * 0.8;  this.velocityX = this.facingRight ? MAX_PLAYER_SPEED * 1.2 : -MAX_PLAYER_SPEED * 1.2;  attackerLimbName = this.facingRight ? 'rightLeg' : 'leftLeg'; if (this.limbs.rightUpperLeg.impairedTimer > 0 || this.limbs.rightLowerLeg.impairedTimer > 0 && this.facingRight || this.limbs.leftUpperLeg.impairedTimer > 0 || this.limbs.leftLowerLeg.impairedTimer > 0 && !this.facingRight) damage *= 0.6; break; default: return;  } actualDamage = damage; if (this.comboState.count > 0 && Date.now() - this.comboState.lastHitTime < COMBO_WINDOW * 1.5) { actualDamage += damage * (this.comboState.count * COMBO_DAMAGE_MULTIPLIER_STEP); } else { this.comboState.count = 0; } attackMidY = this.y - this.height / 2; const attackOriginX = this.facingRight ? this.x + this.width/4 : this.x - this.width/4; const attackCollisionRect = { x: this.facingRight ? attackOriginX : attackOriginX - range, y: attackMidY - HITBOX_HEIGHT / 2, width: range, height: HITBOX_HEIGHT }; const opponentLimbHitboxes = opponent.getLimbHitboxes(); let hitLimbName = null; const limbCheckOrder = ['head', 'torso', 'rightUpperArm', 'rightLowerArm', 'leftUpperArm', 'leftLowerArm', 'rightUpperLeg', 'rightLowerLeg', 'leftUpperLeg', 'leftLowerLeg']; for (const limbName of limbCheckOrder) { const limbBox = opponentLimbHitboxes[limbName]; if (!limbBox) continue; let collision = false; if (limbBox.type === 'circle') { collision = checkRectCircleCollision(attackCollisionRect, limbBox); } else { collision = checkRectCollision(attackCollisionRect, limbBox); } if (collision) { hitLimbName = limbName; break; } } if (hitLimbName) {  if (opponent.isParrying) { const parryDirectionMatches = (this.facingRight && !opponent.facingRight) || (!this.facingRight && opponent.facingRight); if (parryDirectionMatches) {  this.hitStunTimer = HIT_STUN_DURATION_HEAVY * PARRY_SUCCESS_STUN_MULTIPLIER;  opponent.parryTimer = 0; opponent.isParrying = false;  this.comboState.count = 0;  return;  } } opponent.takeDamage(actualDamage, this, knockbackMultiplier, hitStun, hitLimbName); this.comboState.count++; this.comboState.lastHitTime = Date.now();  } }
+            handleGroundSlamImpact(opponent) { /* ... Unchanged ... */ this.groundSlamImpactDone = true; const distanceX = Math.abs(this.x - opponent.x); const distanceY = Math.abs(this.y - opponent.y);  if (distanceX < GROUND_SLAM_AOE_RANGE && distanceY < this.height && !opponent.isJumping) { opponent.takeDamage(GROUND_SLAM_DAMAGE, this, KNOCKBACK_SPECIAL_MULTIPLIER, HIT_STUN_DURATION_HEAVY, 'torso');  } }
+            takeDamage(amount, attacker, knockbackMultiplier = 1, hitStunDuration = HIT_STUN_DURATION_LIGHT, hitLimbName = 'torso') {  
+                if (this.hitStunTimer > 0 && attacker.specialMoveType !== 'groundSlam') return;  
+                let finalAmount = amount; 
+                let applyKnockback = true; 
+                if (this.isParrying) {  
+                    const parryDirectionMatches = (attacker.facingRight && !this.facingRight) || (!attacker.facingRight && this.facingRight); 
+                    if (parryDirectionMatches) {  
+                        attacker.hitStunTimer = HIT_STUN_DURATION_HEAVY * PARRY_SUCCESS_STUN_MULTIPLIER; 
+                        this.parryTimer = 0; this.isParrying = false; 
+                        attacker.comboState.count = 0;  return;  
+                    } else {  
+                        this.isParrying = false;  
+                        this.parryFailedVulnTimer = PARRY_FAIL_VULNERABLE_DURATION;  
+                    } 
+                } 
+                if (this.isGuarding && !this.isParrying) {  
+                    const correctlyGuarding = (this.facingRight && attacker.x > this.x && !attacker.facingRight) || (!this.facingRight && attacker.x < this.x && attacker.facingRight); 
+                    if (correctlyGuarding) { 
+                        finalAmount *= (1 - GUARD_DAMAGE_REDUCTION); 
+                        this.velocityX += (attacker.facingRight ? -GUARD_PUSHBACK_FORCE : GUARD_PUSHBACK_FORCE) / this.mass; 
+                        applyKnockback = false; 
+                        hitStunDuration /= 3; 
+                    } 
+                } 
+                this.health -= finalAmount; if (this.health < 0) this.health = 0; 
+                if (this.limbs[hitLimbName] && finalAmount > KICK_DAMAGE * LIMB_IMPAIR_THRESHOLD_MULTIPLIER) {  
+                    this.limbs[hitLimbName].impairedTimer = this.limbImpairDuration; 
+                } 
+                if (applyKnockback) { 
+                    this.velocityX += (attacker.facingRight ? KNOCKBACK_BASE_X : -KNOCKBACK_BASE_X) * knockbackMultiplier / this.mass; 
+                    this.velocityY = (KNOCKBACK_BASE_Y * knockbackMultiplier) / this.mass; 
+                    this.isJumping = true; 
+                } 
+                this.hitStunTimer = hitStunDuration;  
+                this.isAttacking = false; this.isPerformingSpecialMove = false; this.activeProceduralAnimation = null; this.attackTimer = 0; 
+                this.isGuarding = false; this.comboState.count = 0;  
+                updateHealthBars(); checkGameOver();
+            }
+        }
+        
+        function checkRectCollision(rect1, rect2) { return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y; }
+        function checkRectCircleCollision(rect, circle) { let closestX = Math.max(rect.x, Math.min(circle.cx, rect.x + rect.width)); let closestY = Math.max(rect.y, Math.min(circle.cy, rect.y + rect.height)); let distanceX = circle.cx - closestX; let distanceY = circle.cy - closestY; let distanceSquared = (distanceX * distanceX) + (distanceY * distanceY); return distanceSquared < (circle.radius * circle.radius); }
+        function drawLoadingScreen() { ctx.fillStyle = '#333'; ctx.font = '30px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText("Loading...", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2); }
+        function drawMenuScreen() { ctx.fillStyle = '#1f2937'; ctx.font = 'bold 48px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText("Stickman Fighter", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 80); drawButton(initialMenuButton); }
+        function drawModeSelectScreen() { ctx.fillStyle = '#1f2937'; ctx.font = 'bold 36px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText("Select Mode", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 120); drawButton(pvpButton); drawButton(pvcButton); }
+        function drawDifficultySelectScreen() { ctx.fillStyle = '#1f2937'; ctx.font = 'bold 36px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText("Select Difficulty", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 150); drawButton(difficultyEasyButton); drawButton(difficultyMediumButton); drawButton(difficultyHardButton); }
+        function drawPauseMenu() { ctx.fillStyle = "rgba(0, 0, 0, 0.5)"; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); pauseMenuTitle.style.display = 'block'; menuButtons.PAUSED.forEach(drawButton); }
+        function drawSettingsMenu() { ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); settingsMenuTitle.style.display = 'block'; ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 22px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText("Gravity", CANVAS_WIDTH / 2, gravityLowButton.y - 30); menuButtons.SETTINGS_MENU.forEach(button => { if (button.id.startsWith('gravity') || button.id === 'settingsBack') { drawButton(button); } }); if (currentFightMode === 'PvC') { ctx.fillStyle = '#FFFFFF'; ctx.fillText("AI Difficulty", CANVAS_WIDTH / 2, settingsAIDifficultyY - 30); const aiEasy = {...difficultyEasyButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 - 200, width: 120 }; const aiMedium = {...difficultyMediumButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 - 60, width: 120 }; const aiHard = {...difficultyHardButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 + 80, width: 120 }; drawButton(aiEasy); drawButton(aiMedium); drawButton(aiHard); } }
+        function drawButton(button) { if (button.id === 'gravityLow' && currentGravity === BASE_GRAVITY * 0.7) button.color = button.hoverColor; else if (button.id === 'gravityNormal' && currentGravity === BASE_GRAVITY) button.color = button.hoverColor; else if (button.id === 'gravityHigh' && currentGravity === BASE_GRAVITY * 1.3) button.color = button.hoverColor; else if (button.id === 'easy' && selectedAIDifficulty === 'Easy' && currentGameState === 'SETTINGS_MENU') button.color = button.hoverColor; else if (button.id === 'medium' && selectedAIDifficulty === 'Medium' && currentGameState === 'SETTINGS_MENU') button.color = button.hoverColor; else if (button.id === 'hard' && selectedAIDifficulty === 'Hard' && currentGameState === 'SETTINGS_MENU') button.color = button.hoverColor; ctx.fillStyle = button.color; ctx.fillRect(button.x, button.y, button.width, button.height); ctx.fillStyle = button.textColor; ctx.font = 'bold 20px Inter, sans-serif';  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(button.text, button.x + button.width / 2, button.y + button.height / 2); }
+        function drawFightingScreen() { 
+            drawGround(); 
+            obstacles.forEach(o => o.draw());
+            powerUps.forEach(p => p.draw());
+            if (player1) player1.draw(); 
+            if (player2) player2.draw(); 
+            hitSparks.forEach(s => s.draw()); 
+        }
+        function drawGameOverScreen() { drawFightingScreen(); messageDisplay.style.display = 'block'; resetButton.disabled = false; }
+        
+        function updateGameLogic() { 
+            const delta = 1000/60; 
+            if (currentGameState === 'FIGHTING' && gameActive) { 
+                if (player1) player1.update(player2); 
+                if (player2) player2.update(player1); 
+
+                if (Date.now() - lastPowerUpSpawnTime > POWERUP_SPAWN_INTERVAL) {
+                    spawnPowerUp();
+                    lastPowerUpSpawnTime = Date.now();
+                }
+                for (let i = powerUps.length - 1; i >= 0; i--) {
+                    powerUps[i].update();
+                    if (!powerUps[i].active) {
+                        powerUps.splice(i, 1); 
+                    }
+                }
+                for (let i = hitSparks.length - 1; i >= 0; i--) {
+                    hitSparks[i].update(delta);
+                    if (!hitSparks[i].active) {
+                        hitSparks.splice(i, 1);
+                    }
+                }
+            } 
+        }
+        function renderGame() { ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT); if (player1 && player2 && (currentGameState === 'FIGHTING' || currentGameState === 'PAUSED' || currentGameState === 'SETTINGS_MENU' || currentGameState === 'GAME_OVER')) { drawFightingScreen(); } if (currentGameState === 'LOADING') drawLoadingScreen(); else if (currentGameState === 'MENU') drawMenuScreen(); else if (currentGameState === 'MODE_SELECT') drawModeSelectScreen(); else if (currentGameState === 'DIFFICULTY_SELECT') drawDifficultySelectScreen(); else if (currentGameState === 'PAUSED') drawPauseMenu(); else if (currentGameState === 'SETTINGS_MENU') drawSettingsMenu(); else if (currentGameState === 'GAME_OVER') { messageDisplay.style.display = 'block'; resetButton.disabled = false; } if (currentGameState !== 'PAUSED') pauseMenuTitle.style.display = 'none'; if (currentGameState !== 'SETTINGS_MENU') settingsMenuTitle.style.display = 'none'; }
+        function gameLoop() { if (currentGameState !== 'PAUSED' && currentGameState !== 'SETTINGS_MENU') { updateGameLogic(); } renderGame(); animationFrameId = requestAnimationFrame(gameLoop); }
+        function handleCanvasClick(event) { const rect = canvas.getBoundingClientRect(); const clickX = event.clientX - rect.left; const clickY = event.clientY - rect.top; if (currentGameState === 'MENU') { if (isButtonClicked(clickX, clickY, initialMenuButton)) currentGameState = 'MODE_SELECT'; } else if (currentGameState === 'MODE_SELECT') { if (isButtonClicked(clickX, clickY, pvpButton)) { currentGameState = 'FIGHTING'; initFightScene('PvP'); canvas.style.cursor = 'default'; } else if (isButtonClicked(clickX, clickY, pvcButton)) currentGameState = 'DIFFICULTY_SELECT'; } else if (currentGameState === 'DIFFICULTY_SELECT') { if (isButtonClicked(clickX, clickY, difficultyEasyButton)) { selectedAIDifficulty = 'Easy'; currentGameState = 'FIGHTING'; initFightScene('PvC'); } else if (isButtonClicked(clickX, clickY, difficultyMediumButton)) { selectedAIDifficulty = 'Medium'; currentGameState = 'FIGHTING'; initFightScene('PvC'); } else if (isButtonClicked(clickX, clickY, difficultyHardButton)) { selectedAIDifficulty = 'Hard'; currentGameState = 'FIGHTING'; initFightScene('PvC'); } if (currentGameState === 'FIGHTING') canvas.style.cursor = 'default'; } else if (currentGameState === 'PAUSED') { if (isButtonClicked(clickX, clickY, pauseResumeButton)) { currentGameState = 'FIGHTING'; gameActive = true; eventManager.dispatchEvent('GAME_RESUMED'); } else if (isButtonClicked(clickX, clickY, pauseSettingsButton)) { currentGameState = 'SETTINGS_MENU'; } else if (isButtonClicked(clickX, clickY, pauseMainMenuButton)) { goToMainMenu(); } } else if (currentGameState === 'SETTINGS_MENU') { if (isButtonClicked(clickX, clickY, settingsBackButton)) { currentGameState = 'PAUSED'; } else if (isButtonClicked(clickX, clickY, gravityLowButton)) { currentGravity = BASE_GRAVITY * 0.7; eventManager.dispatchEvent('GRAVITY_CHANGED', { newGravity: currentGravity }); } else if (isButtonClicked(clickX, clickY, gravityNormalButton)) { currentGravity = BASE_GRAVITY; eventManager.dispatchEvent('GRAVITY_CHANGED', { newGravity: currentGravity }); } else if (isButtonClicked(clickX, clickY, gravityHighButton)) { currentGravity = BASE_GRAVITY * 1.3; eventManager.dispatchEvent('GRAVITY_CHANGED', { newGravity: currentGravity }); } if (currentFightMode === 'PvC') { const aiEasy = {...difficultyEasyButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 - 200, width: 120 }; const aiMedium = {...difficultyMediumButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 - 60, width: 120 }; const aiHard = {...difficultyHardButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 + 80, width: 120 }; if (isButtonClicked(clickX, clickY, aiEasy)) { selectedAIDifficulty = 'Easy'; eventManager.dispatchEvent('AI_DIFFICULTY_CHANGED', { newDifficulty: selectedAIDifficulty }); } else if (isButtonClicked(clickX, clickY, aiMedium)) { selectedAIDifficulty = 'Medium'; eventManager.dispatchEvent('AI_DIFFICULTY_CHANGED', { newDifficulty: selectedAIDifficulty }); } else if (isButtonClicked(clickX, clickY, aiHard)) { selectedAIDifficulty = 'Hard'; eventManager.dispatchEvent('AI_DIFFICULTY_CHANGED', { newDifficulty: selectedAIDifficulty }); } } } }
+        function handleCanvasMouseMove(event) { const rect = canvas.getBoundingClientRect(); const mouseX = event.clientX - rect.left; const mouseY = event.clientY - rect.top; let onButton = false; let currentButtonsToHover = menuButtons[currentGameState] || []; if (currentGameState === 'SETTINGS_MENU' && currentFightMode === 'PvC') { const aiEasy = {...difficultyEasyButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 - 200, width: 120 }; const aiMedium = {...difficultyMediumButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 - 60, width: 120 }; const aiHard = {...difficultyHardButton, y: settingsAIDifficultyY, x: CANVAS_WIDTH/2 + 80, width: 120 }; currentButtonsToHover = [...currentButtonsToHover, aiEasy, aiMedium, aiHard];} if (currentButtonsToHover) {  currentButtonsToHover.forEach(button => {  if (isButtonClicked(mouseX, mouseY, button)) {  let isActiveSetting = false; if (button.id === 'gravityLow' && currentGravity === BASE_GRAVITY * 0.7) isActiveSetting = true; else if (button.id === 'gravityNormal' && currentGravity === BASE_GRAVITY) isActiveSetting = true; else if (button.id === 'gravityHigh' && currentGravity === BASE_GRAVITY * 1.3) isActiveSetting = true; else if (button.id === 'easy' && selectedAIDifficulty === 'Easy' && currentGameState === 'SETTINGS_MENU') isActiveSetting = true; else if (button.id === 'medium' && selectedAIDifficulty === 'Medium' && currentGameState === 'SETTINGS_MENU') isActiveSetting = true; else if (button.id === 'hard' && selectedAIDifficulty === 'Hard' && currentGameState === 'SETTINGS_MENU') isActiveSetting = true; button.color = button.hoverColor;  onButton = true;  } else {  if (button.id === 'gravityLow' && currentGravity === BASE_GRAVITY * 0.7) button.color = button.hoverColor; else if (button.id === 'gravityNormal' && currentGravity === BASE_GRAVITY) button.color = button.hoverColor; else if (button.id === 'gravityHigh' && currentGravity === BASE_GRAVITY * 1.3) button.color = button.hoverColor; else if (button.id === 'easy' && selectedAIDifficulty === 'Easy' && currentGameState === 'SETTINGS_MENU') button.color = button.hoverColor; else if (button.id === 'medium' && selectedAIDifficulty === 'Medium' && currentGameState === 'SETTINGS_MENU') button.color = button.hoverColor; else if (button.id === 'hard' && selectedAIDifficulty === 'Hard' && currentGameState === 'SETTINGS_MENU') button.color = button.hoverColor; else { if(button.id === 'start') button.color = '#60a5fa'; else if(button.id === 'pvp') button.color = '#34d399'; else if(button.id === 'pvc') button.color = '#fbbf24'; else if(button.id === 'easy') button.color = '#a7f3d0'; else if(button.id === 'medium') button.color = '#fcd34d'; else if(button.id === 'hard') button.color = '#f87171'; else if(button.id === 'resume') button.color = '#34d399'; else if(button.id === 'pauseSettings') button.color = '#fbbf24'; else if(button.id === 'pauseMainMenu') button.color = '#f87171'; else if(button.id === 'settingsBack') button.color = '#9ca3af'; else if(button.id === 'gravityLow') button.color = '#60a5fa'; else if(button.id === 'gravityNormal') button.color = '#60a5fa'; else if(button.id === 'gravityHigh') button.color = '#60a5fa'; } } });  }  canvas.style.cursor = onButton ? 'pointer' : 'default';  }
+        function isButtonClicked(x, y, button) { return x >= button.x && x <= button.x + button.width && y >= button.y && y <= button.y + button.height; }
+        function goToMainMenu() { currentGameState = 'MENU'; messageDisplay.style.display = 'none'; healthBarsDiv.style.display = 'none'; resetButton.disabled = true; gameActive = false; player1 = null; player2 = null; obstacles = []; powerUps = []; hitSparks = []; eventManager.dispatchEvent('RETURN_TO_MAIN_MENU'); }
+        
+        function initObstacles() {
+            obstacles = []; 
+            const numObstacles = Math.floor(Math.random() * 3) + 1; 
+            for (let i = 0; i < numObstacles; i++) {
+                const obsWidth = Math.random() * 80 + 40; 
+                const obsHeight = Math.random() * 100 + 50; 
+                const obsX = Math.random() * (CANVAS_WIDTH - obsWidth - 200) + 100; 
+                const obsY = GROUND_LEVEL - obsHeight;
+                let tooClose = false;
+                const spawnMargin = 150;
+                if ((obsX < CANVAS_WIDTH / 4 + spawnMargin && obsX + obsWidth > CANVAS_WIDTH / 4 - spawnMargin) ||
+                    (obsX < CANVAS_WIDTH * 3 / 4 + spawnMargin && obsX + obsWidth > CANVAS_WIDTH * 3 / 4 - spawnMargin)) {
+                    tooClose = true;
+                }
+                obstacles.forEach(existingObs => {
+                    if (Math.abs(obsX - existingObs.x) < existingObs.width + obsWidth &&
+                        Math.abs(obsY - existingObs.y) < existingObs.height + obsHeight) {
+                        tooClose = true;
+                    }
+                });
+                if (!tooClose) {
+                    obstacles.push(new Obstacle(obsX, obsY, obsWidth, obsHeight));
+                }
+            }
+        }
+
+        function spawnPowerUp() {
+            const type = 'health'; 
+            const radius = 15;
+            const x = Math.random() * (CANVAS_WIDTH - radius * 2) + radius;
+            const y = -radius; 
+            const color = '#4CAF50'; 
+            powerUps.push(new PowerUp(x, y, radius, type, color));
+        }
+
+
+        function initFightScene(gameMode) { 
+            currentFightMode = gameMode; gameActive = false; 
+            messageDisplay.style.display = 'none';
+            healthBarsDiv.style.display = 'flex';
+            resetButton.disabled = true; 
+            initObstacles(); 
+            powerUps = []; 
+            hitSparks = []; 
+            lastPowerUpSpawnTime = Date.now(); 
+
+            const p1Colors = { head: '#3b82f6', torso: '#2563eb', headOutline: '#1e40af', leftUpperArm: '#60a5fa', leftLowerArm: '#93c5fd', rightUpperArm: '#60a5fa', rightLowerArm: '#93c5fd', leftUpperLeg: '#1d4ed8', leftLowerLeg: '#2563eb', rightUpperLeg: '#1d4ed8', rightLowerLeg: '#2563eb'}; 
+            const p2Colors = { head: '#ef4444', torso: '#dc2626', headOutline: '#991b1b', leftUpperArm: '#f87171', leftLowerArm: '#fca5a5', rightUpperArm: '#f87171', rightLowerArm: '#fca5a5', leftUpperLeg: '#b91c1c', leftLowerLeg: '#dc2626', rightUpperLeg: '#b91c1c', rightLowerLeg: '#dc2626'}; 
+            const p1Controls = { left: 'KeyA', right: 'KeyD', jump: 'KeyW', punch: 'KeyF', kick: 'KeyG', guard: 'ShiftLeft', slam: 'KeyS', airDodge: 'KeyC', parry: 'KeyV', run: 'KeyQ' }; 
+            player1 = new Stickman(CANVAS_WIDTH / 4, GROUND_LEVEL - HITBOX_HEIGHT / 2, p1Colors, true, p1Controls, false); 
+            if (gameMode === 'PvP') { 
+                const p2Controls = { left: 'ArrowLeft', right: 'ArrowRight', jump: 'ArrowUp', punch: 'KeyK', kick: 'KeyL', guard: 'ShiftRight', slam: 'ArrowDown', airDodge: 'KeyM', parry: 'KeyN', run: 'KeyU' }; 
+                player2 = new Stickman(CANVAS_WIDTH * 3 / 4, GROUND_LEVEL - HITBOX_HEIGHT / 2, p2Colors, false, p2Controls, false); 
+            } else { 
+                player2 = new Stickman(CANVAS_WIDTH * 3 / 4, GROUND_LEVEL - HITBOX_HEIGHT / 2, p2Colors, false, null, true, 'CounterStriker'); 
+            } 
+            updateHealthBars(); 
+            messageDisplay.textContent = "Fight!"; 
+            messageDisplay.style.display = 'block'; 
+            setTimeout(() => { if (currentGameState === 'FIGHTING') messageDisplay.style.display = 'none'; gameActive = true; }, 1500); 
+        }
+        function updateHealthBars() { if (!player1 || !player2) return; document.getElementById('player1HealthBarInner').style.width = `${(player1.health / PLAYER_HEALTH_MAX) * 100}%`; document.getElementById('player2HealthBarInner').style.width = `${(player2.health / PLAYER_HEALTH_MAX) * 100}%`; }
+        function checkGameOver() { if (currentGameState !== 'FIGHTING' || !gameActive) return; let winner = null; if (player1 && player1.health <= 0) winner = "Player 2 (Red)"; if (player2 && player2.health <= 0) winner = "Player 1 (Blue)"; if (winner) { gameActive = false; currentGameState = 'GAME_OVER'; messageDisplay.textContent = `${winner} Wins!`; } }
+        function drawGround() { ctx.strokeStyle = '#888'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, GROUND_LEVEL); ctx.lineTo(CANVAS_WIDTH, GROUND_LEVEL); ctx.stroke(); }
+        
+        function handleKeyDown(e) {
+            if (e.code === 'Escape' && (currentGameState === 'FIGHTING' || currentGameState === 'PAUSED' || currentGameState === 'SETTINGS_MENU')) {
+                togglePauseState();
+                return;
+            }
+            if (currentGameState !== 'FIGHTING' || !gameActive) return;
+            keysPressed[e.code] = true;
+            handlePlayerActions(e.code, player1, player2);
+            handlePlayerActions(e.code, player2, player1);
+        }
+
+        function handleKeyUp(e) {
+            if (currentGameState !== 'FIGHTING') return;
+            keysPressed[e.code] = false;
+            handleGuardAndRunState(e.code, player1);
+            handleGuardAndRunState(e.code, player2);
+        }
+
+        function togglePauseState() {
+            if (currentGameState === 'FIGHTING' && gameActive) {
+                currentGameState = 'PAUSED';
+                gameActive = false;
+                eventManager.dispatchEvent('GAME_PAUSED');
+            } else if (currentGameState === 'PAUSED') {
+                currentGameState = 'FIGHTING';
+                gameActive = true;
+                eventManager.dispatchEvent('GAME_RESUMED');
+            } else if (currentGameState === 'SETTINGS_MENU') {
+                currentGameState = 'PAUSED';
+            }
+        }
+
+        function handlePlayerActions(keyCode, player, opponent) {
+            if (player && !player.isNPC && player.canAct()) {
+                if (keyCode === player.controls.punch) player.initiateAttack('punch', opponent);
+                else if (keyCode === player.controls.kick) player.initiateAttack('kick', opponent);
+                else if (keyCode === player.controls.slam) player.initiateSpecialMove('groundSlam', opponent);
+                else if (keyCode === player.controls.parry) player.initiateParry();
+                else if (keyCode === player.controls.airDodge && player.isJumping) {
+                    let dx = 0, dy = 0;
+                    if (keysPressed[player.controls.left]) dx = -1;
+                    else if (keysPressed[player.controls.right]) dx = 1;
+                    if (keysPressed[player.controls.jump]) dy = -1;
+                    else if (keysPressed['KeyS']) dy = 1;
+                    player.initiateAirDodge(dx, dy);
+                }
+            }
+        }
+
+        function handleGuardAndRunState(keyCode, player) {
+            if (player && !player.isNPC) {
+                if (keyCode === player.controls.guard) player.isGuarding = false;
+                if (keyCode === player.controls.run) player.isRunning = false;
+            }
+        }
+
+        function initializeGame() {
+            currentGameState = 'LOADING';
+            hideUIElements();
+            setupCanvasEvents();
+            setTimeout(() => changeGameState('MENU'), LOADING_DURATION);
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function hideUIElements() {
+            healthBarsDiv.style.display = 'none';
+            resetButton.disabled = true;
+            messageDisplay.style.display = 'none';
+            pauseMenuTitle.style.display = 'none';
+            settingsMenuTitle.style.display = 'none';
+        }
+
+        function setupCanvasEvents() {
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+        }
+
+        function changeGameState(newState) {
+            currentGameState = newState;
+            switch (newState) {
+                case 'MENU':
+                    goToMainMenu();
+                    break;
+                case 'FIGHTING':
+                    gameActive = true;
+                    break;
+                case 'PAUSED':
+                    gameActive = false;
+                    break;
+                case 'SETTINGS_MENU':
+                    break;
+                case 'GAME_OVER':
+                    gameActive = false;
+                    break;
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        resetButton.addEventListener('click', goToMainMenu);
+        initializeGame();
+    </script>
+</body>
+</html>
