@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Creation Screen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .limb-selection, .color-selection {
+            margin-bottom: 20px;
+        }
+
+        .limb-selection label, .color-selection label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .limb-selection select, .color-selection input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .preview {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .preview div {
+            display: inline-block;
+            width: 100px;
+            height: 100px;
+            margin: 5px;
+            border: 2px solid #000;
+        }
+
+        .stats {
+            margin-top: 20px;
+        }
+
+        .stats p {
+            margin: 5px 0;
+        }
+
+        .stick-figure {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .stick-figure div {
+            width: 50px;
+            height: 50px;
+            margin: 5px;
+            border: 2px solid #000;
+            background-color: #fff;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .stick-figure .selected {
+            background-color: #ff0000;
+        }
+
+        .randomize-button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .randomize-button:hover {
+            background-color: #0056b3;
+        }
+
+        .influence-input {
+            position: absolute;
+            width: 60px;
+            padding: 5px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Character Creation</h1>
+        <form id="character-form">
+            <div class="stick-figure" id="stick-figure">
+                <div id="head" data-limb="head">Head</div>
+                <div id="torso" data-limb="torso">Torso</div>
+                <div id="left-arm" data-limb="left-arm">Left Arm</div>
+                <div id="right-arm" data-limb="right-arm">Right Arm</div>
+                <div id="left-leg" data-limb="left-leg">Left Leg</div>
+                <div id="right-leg" data-limb="right-leg">Right Leg</div>
+            </div>
+            <button type="button" class="randomize-button" id="randomize-character">Randomize Character</button>
+            <div class="color-selection">
+                <label for="colors">Select Colors:</label>
+                <label for="color1">Primary Color:</label>
+                <input type="color" id="color1" name="color1" value="#ff0000" title="Choose primary color">
+                <label for="color2">Secondary Color:</label>
+                <input type="color" id="color2" name="color2" value="#00ffff" title="Choose secondary color">
+            </div>
+        </form>
+        <div class="preview">
+            <h2>Character Preview</h2>
+            <div id="preview-limbs"></div>
+        </div>
+        <div class="stats">
+            <h2>Character Stats</h2>
+            <p id="elemental-strength"></p>
+            <p id="weakness"></p>
+            <p id="stats-explanation"></p>
+        </div>
+    </div>
+
+    <script>
+        const stickFigure = document.getElementById('stick-figure');
+        const limbs = {};
+
+        stickFigure.addEventListener('click', (event) => {
+            const limb = event.target.dataset.limb;
+            if (limb) {
+                event.target.classList.toggle('selected');
+                limbs[limb] = event.target.classList.contains('selected');
+                if (limbs[limb]) {
+                    const influenceInput = document.createElement('input');
+                    influenceInput.type = 'number';
+                    influenceInput.min = 0;
+                    influenceInput.max = 100;
+                    influenceInput.value = limbs[limb].influence || 0;
+                    influenceInput.placeholder = 'Set Influence (0-100)';
+                    influenceInput.classList.add('influence-input');
+                    influenceInput.style.left = `${event.target.offsetLeft}px`;
+                    influenceInput.style.top = `${event.target.offsetTop + event.target.offsetHeight}px`;
+                    influenceInput.addEventListener('change', () => {
+                        const influenceValue = parseInt(influenceInput.value, 10);
+                        if (!isNaN(influenceValue) && influenceValue >= 0 && influenceValue <= 100) {
+                            limbs[limb].influence = influenceValue;
+                            updateSingleLimbColor(event.target);
+                            updateColorDistribution();
+                        } else {
+                            alert('Invalid influence value. Please enter a number between 0 and 100.');
+                            influenceInput.value = limbs[limb].influence || 0;
+                        }
+                    });
+                    document.body.appendChild(influenceInput);
+                } else {
+                    limbs[limb] = { selected: false, influence: 0 };
+                }
+                updateColorDistribution();
+            }
+        });
+
+        document.getElementById('randomize-character').addEventListener('click', () => {
+            const limbElements = stickFigure.querySelectorAll('div');
+            limbElements.forEach((element) => {
+                const isSelected = Math.random() > 0.5;
+                element.classList.toggle('selected', isSelected);
+                limbs[element.dataset.limb] = isSelected;
+            });
+
+            const color1 = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+            const color2 = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+            document.getElementById('color1').value = color1;
+            document.getElementById('color2').value = color2;
+            updateLimbColors();
+        });
+
+        const color1Input = document.getElementById('color1');
+        const color2Input = document.getElementById('color2');
+
+        // Ensure the elements exist before adding event listeners
+        if (color1Input) {
+            color1Input.addEventListener('input', () => {
+                const selectedLimb = document.querySelector('.stick-figure .selected');
+                if (selectedLimb) {
+                    updateSingleLimbColor(selectedLimb);
+                }
+            });
+        } else {
+            console.warn('Element with ID "color1" not found in the DOM.');
+        }
+
+        if (color2Input) {
+            color2Input.addEventListener('input', () => {
+                const selectedLimb = document.querySelector('.stick-figure .selected');
+                if (selectedLimb) {
+                    updateSingleLimbColor(selectedLimb);
+                }
+            });
+        } else {
+            console.warn('Element with ID "color2" not found in the DOM.');
+        }
+
+        function updateSingleLimbColor(limbElement) {
+            const color1 = document.getElementById('color1').value;
+            const color2 = document.getElementById('color2').value;
+            const currentColor = limbElement.style.backgroundColor;
+            const newColor = Math.random() > 0.5 ? color1 : color2;
+
+            if (currentColor !== newColor) {
+                limbElement.style.backgroundColor = newColor;
+            }
+
+            updateColorDistribution();
+        }
+
+        function updateColorDistribution() {
+            const limbElements = stickFigure.querySelectorAll('div');
+            const colorDistribution = {};
+            let totalInfluence = 0;
+
+            limbElements.forEach((element) => {
+                const limb = element.dataset.limb;
+                if (limbs[limb] && limbs[limb].selected) {
+                    const limbColor = element.style.backgroundColor;
+                    const influence = limbs[limb].influence || 0;
+                    totalInfluence += influence;
+                    if (limbColor !== 'rgb(255, 255, 255)' && limbColor !== '') {
+                        colorDistribution[limbColor] = (colorDistribution[limbColor] || 0) + influence;
+                    }
+                }
+            });
+
+            if (totalInfluence > 100) {
+                alert("Total influence exceeds 100%. Please adjust limb influences.");
+                return;
+            }
+
+            const totalSelected = Object.values(colorDistribution).reduce((a, b) => a + b, 0);
+            const dominantColor = Object.keys(colorDistribution).reduce((a, b) => colorDistribution[a] > colorDistribution[b] ? a : b, null);
+
+            const elementalStrength = document.getElementById('elemental-strength');
+            const weakness = document.getElementById('weakness');
+
+            if (totalSelected > 0) {
+                const dominantPercentage = (colorDistribution[dominantColor] / totalSelected) * 100;
+                if (dominantPercentage === 100) {
+                    elementalStrength.textContent = `Elemental Strength: ${dominantColor === 'rgb(255, 0, 0)' ? 'Flame' : 'Water'}`;
+                    weakness.textContent = `Weakness: ${dominantColor === 'rgb(255, 0, 0)' ? 'Water' : 'Flame'}`;
+                } else {
+                    elementalStrength.textContent = 'Elemental Strength: Balanced Defense';
+                    weakness.textContent = 'Weakness: None';
+                }
+            } else {
+                elementalStrength.textContent = 'Elemental Strength: Neutral';
+                weakness.textContent = 'Weakness: None';
+            }
+
+            const percentageInfluence = Object.keys(colorDistribution).map(color => {
+                const percentage = ((colorDistribution[color] / totalSelected) * 100).toFixed(2);
+                return `${color}: ${percentage}%`;
+            }).join(', ');
+
+            document.getElementById('stats-explanation').textContent = `Color Influence: ${percentageInfluence}`;
+        }
+
+        document.getElementById('generate-character').addEventListener('click', () => {
+            const selectedLimbs = Object.keys(limbs).filter((limb) => limbs[limb]);
+            const color1 = document.getElementById('color1').value;
+            const color2 = document.getElementById('color2').value;
+
+            const preview = document.getElementById('preview-limbs');
+            preview.innerHTML = '';
+            selectedLimbs.forEach((limb) => {
+                const limbDiv = document.createElement('div');
+                limbDiv.style.backgroundColor = color1;
+                limbDiv.textContent = limb;
+                preview.appendChild(limbDiv);
+            });
+
+            const elementalStrength = document.getElementById('elemental-strength');
+            const weakness = document.getElementById('weakness');
+            const statsExplanation = document.getElementById('stats-explanation');
+
+            if (color1 === '#ff0000' && color2 === '#00ffff') {
+                elementalStrength.textContent = 'Elemental Strength: Steam';
+                weakness.textContent = 'Weakness: None';
+            } else if (color1 === '#ff0000') {
+                elementalStrength.textContent = 'Elemental Strength: Flame';
+                weakness.textContent = 'Weakness: Water';
+            } else if (color2 === '#00ffff') {
+                elementalStrength.textContent = 'Elemental Strength: Water';
+                weakness.textContent = 'Weakness: Flame';
+            } else {
+                elementalStrength.textContent = 'Elemental Strength: Neutral';
+                weakness.textContent = 'Weakness: None';
+            }
+
+            const stats = selectedLimbs.map((limb) => {
+                switch (limb) {
+                    case 'left-arm': return { strength: 8, speed: 4 };
+                    case 'right-arm': return { strength: 10, speed: 5 };
+                    case 'left-leg': return { strength: 4, speed: 8 };
+                    case 'right-leg': return { strength: 5, speed: 10 };
+                    case 'head': return { strength: 3, intelligence: 10 };
+                    case 'torso': return { defense: 10, agility: 5 };
+                    default: return {};
+                }
+            });
+
+            const totalStats = stats.reduce((acc, stat) => {
+                for (const key in stat) {
+                    acc[key] = (acc[key] || 0) + stat[key];
+                }
+                return acc;
+            }, {});
+
+            statsExplanation.textContent = `Stats Explanation: Total stats are calculated by summing the individual stats of selected limbs. Current stats: ${JSON.stringify(totalStats)}`;
+        });
+    </script>
+</body>
+</html>

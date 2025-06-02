@@ -26,7 +26,7 @@
             z-index: 10;
             max-height: 90vh;
             overflow-y: auto;
-            width: 320px; /* Slightly wider for new controls */
+            width: 340px; 
         }
         .control-group {
             margin-bottom: 15px;
@@ -59,38 +59,50 @@
             box-sizing: border-box;
         }
         input[type="range"] {
-            padding: 0; /* Override for range inputs */
+            padding: 0; 
         }
-        button {
-            background-color: #61dafb;
-            color: #1a1a1a;
+        button, .file-input-label { 
+            background-color: #555; 
+            color: #e0e0e0;
             border: none;
             padding: 10px 15px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, color 0.3s ease;
             width: 100%;
             margin-top: 10px;
             box-sizing: border-box;
+            display: inline-block; 
+            text-align: center; 
+            font-size: 1em; 
+            line-height: normal; 
         }
-        button:hover {
-            background-color: #82eaff;
+        button:hover, .file-input-label:hover {
+            background-color: #777;
         }
-        button.secondary { 
+        button.action-button { 
+             background-color: #61dafb;
+             color: #1a1a1a;
+        }
+        button.action-button:hover {
+             background-color: #82eaff;
+        }
+        button.secondary, .file-input-label.secondary { 
             background-color: #4CAF50; 
             color: white;
         }
-        button.secondary:hover {
+        button.secondary:hover, .file-input-label.secondary:hover {
             background-color: #66bb6a;
         }
-        .paint-type-button {
-            width: calc(50% - 5px); /* Two buttons per row */
-            margin-bottom: 5px;
-            background-color: #555;
-            color: #e0e0e0;
+        input[type="file"] { 
+            display: none;
         }
-        .paint-type-button.active {
+        .tool-button { 
+            width: calc(50% - 5px); 
+            margin-bottom: 5px;
+        }
+        .tool-button.active { 
             background-color: #61dafb;
             color: #1a1a1a;
             border: 2px solid #fff;
@@ -119,11 +131,10 @@
             background-color: rgba(0,0,0,0.7);
             padding: 20px;
             border-radius: 8px;
-            display: none; /* Hidden by default */
+            display: none; 
             z-index: 100;
         }
-        canvas { display: block; cursor: crosshair; } /* Change cursor for painting */
-        /* Style for the custom error message */
+        canvas { display: block; cursor: default; } 
         .critical-error-message { 
             position:fixed; 
             bottom:20px; 
@@ -145,80 +156,92 @@
     <div id="controls-container">
         <div class="control-group">
             <h3>Terrain Dimensions</h3>
-            <label for="terrainWidth">Width (units): <span id="terrainWidthVal">200</span></label>
+            <label for="terrainWidth">Width: <span id="terrainWidthVal">200</span></label>
             <input type="range" id="terrainWidth" min="50" max="500" value="200" step="10">
-            
-            <label for="terrainDepth">Depth (units): <span id="terrainDepthVal">200</span></label>
+            <label for="terrainDepth">Depth: <span id="terrainDepthVal">200</span></label>
             <input type="range" id="terrainDepth" min="50" max="500" value="200" step="10">
-
-            <label for="segments">Segments (complexity): <span id="segmentsVal">100</span></label>
+            <label for="segments">Segments: <span id="segmentsVal">100</span></label>
             <input type="range" id="segments" min="20" max="250" value="100" step="5">
         </div>
 
         <div class="control-group">
             <h3>Noise Parameters</h3>
-            <label for="noiseScale">Noise Scale: <span id="noiseScaleVal">70</span></label>
+            <label for="noiseScale">Scale: <span id="noiseScaleVal">70</span></label>
             <input type="range" id="noiseScale" min="10" max="200" value="70" step="1">
-            
             <label for="terrainHeightScale">Max Height: <span id="terrainHeightScaleVal">30</span></label>
             <input type="range" id="terrainHeightScale" min="5" max="100" value="30" step="1">
-
-            <label for="octaves">Octaves (detail): <span id="octavesVal">4</span></label>
+            <label for="octaves">Octaves: <span id="octavesVal">4</span></label>
             <input type="range" id="octaves" min="1" max="8" value="4" step="1">
-
-            <label for="persistence">Persistence (amplitude): <span id="persistenceVal">0.5</span></label>
+            <label for="persistence">Persistence: <span id="persistenceVal">0.5</span></label>
             <input type="range" id="persistence" min="0.1" max="1" value="0.5" step="0.05">
-
-            <label for="lacunarity">Lacunarity (frequency): <span id="lacunarityVal">2.0</span></label>
+            <label for="lacunarity">Lacunarity: <span id="lacunarityVal">2.0</span></label>
             <input type="range" id="lacunarity" min="1.5" max="4" value="2.0" step="0.1">
         </div>
 
         <div class="control-group">
             <h3>Terrain Features</h3>
-            <label for="plateauLevel">Plateau Level (0-1, 0=off): <span id="plateauLevelVal">0.0</span></label>
+            <label for="plateauLevel">Plateau Level: <span id="plateauLevelVal">0.0</span></label>
             <input type="range" id="plateauLevel" min="0" max="1" value="0.0" step="0.05">
-            
-            <label for="plateauSmoothing">Plateau Smoothing: <span id="plateauSmoothingVal">0.1</span></label>
+            <label for="plateauSmoothing">Plateau Smooth: <span id="plateauSmoothingVal">0.1</span></label>
             <input type="range"id="plateauSmoothing" min="0.01" max="0.5" value="0.1" step="0.01">
-
-            <label for="valleyDepthFactor">Valley Depth Factor: <span id="valleyDepthFactorVal">1.5</span></label>
+            <label for="valleyDepthFactor">Valley Depth: <span id="valleyDepthFactorVal">1.5</span></label>
             <input type="range" id="valleyDepthFactor" min="1.0" max="5.0" value="1.5" step="0.1">
-            
-            <label for="valleyThreshold">Valley Threshold (-1 to 0): <span id="valleyThresholdVal">-0.2</span></label>
+            <label for="valleyThreshold">Valley Thresh: <span id="valleyThresholdVal">-0.2</span></label>
             <input type="range" id="valleyThreshold" min="-1" max="0" value="-0.2" step="0.05">
         </div>
         
         <div class="control-group">
             <h3>Coloring &amp; Base Types</h3>
-            <label for="waterLevel">Water Level (-50 to 50): <span id="waterLevelVal">0</span></label>
+            <label for="waterLevel">Water Level: <span id="waterLevelVal">0</span></label>
             <input type="range" id="waterLevel" min="-50" max="50" value="0" step="1">
+        </div>
+        
+        <div class="control-group">
+            <h3>Camera Controls</h3>
+            <button id="resetCameraButton">Reset Camera</button>
+            <label for="minDistance">Min Zoom: <span id="minDistanceVal">20</span></label>
+            <input type="range" id="minDistance" min="1" max="100" value="20" step="1">
+            <label for="maxDistance">Max Zoom: <span id="maxDistanceVal">500</span></label>
+            <input type="range" id="maxDistance" min="100" max="1000" value="500" step="10">
         </div>
 
         <div class="control-group">
-            <h3>Terrain Painting</h3>
+            <h3>Tools</h3>
+            <button class="tool-button" id="navigateToolButton" data-tool="NONE">Navigate</button>
+            <hr style="margin: 10px 0; border-color: #444;">
             <label for="brushSize">Brush Size: <span id="brushSizeVal">10</span></label>
             <input type="range" id="brushSize" min="1" max="50" value="10" step="1">
+            
+            <label for="sculptStrength" style="margin-top:10px;">Sculpt Strength: <span id="sculptStrengthVal">0.5</span></label>
+            <input type="range" id="sculptStrength" min="0.1" max="2" value="0.5" step="0.1">
             <div class="button-row">
-                <button class="paint-type-button" data-type="GRASS">Grass</button>
-                <button class="paint-type-button" data-type="SAND">Sand</button>
+                <button class="tool-button" data-tool="SCULPT_RAISE">Raise</button>
+                <button class="tool-button" data-tool="SCULPT_LOWER">Lower</button>
+            </div>
+            <hr style="margin: 10px 0; border-color: #444;">
+            <div class="button-row">
+                <button class="tool-button" data-tool="PAINT" data-type="GRASS">Grass</button>
+                <button class="tool-button" data-tool="PAINT" data-type="SAND">Sand</button>
             </div>
             <div class="button-row">
-                 <button class="paint-type-button" data-type="ROCK">Rock</button>
-                 <button class="paint-type-button" data-type="SNOW">Snow</button>
+                 <button class="tool-button" data-tool="PAINT" data-type="ROCK">Rock</button>
+                 <button class="tool-button" data-tool="PAINT" data-type="SNOW">Snow</button>
             </div>
              <div class="button-row">
-                <button class="paint-type-button" data-type="LAVA">Lava</button>
-                <button class="paint-type-button" data-type="GRAVEL">Gravel</button>
+                <button class="tool-button" data-tool="PAINT" data-type="LAVA">Lava</button>
+                <button class="tool-button" data-tool="PAINT" data-type="GRAVEL">Gravel</button>
             </div>
         </div>
 
-
-        <button id="regenerateButton">Regenerate Terrain</button>
+        <button id="regenerateButton" class="action-button">Regenerate Terrain</button>
         <button id="saveTerrainButton" class="secondary">Save Terrain Data</button>
+        <label for="loadTerrainInput" class="file-input-label secondary">Load Terrain Data</label>
+        <input type="file" id="loadTerrainInput" accept=".json">
+
     </div>
 
     <div id="loading-indicator">Generating Terrain...</div>
-    <div id="info">Use mouse to orbit, scroll to zoom, right-click to pan. Left-click to paint (when a type is selected).</div>
+    <div id="info">Double-click terrain to focus. Left-click to paint/sculpt. Right-click to pan.</div>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
     <script>console.log('Diag three.js (jsdelivr 0.132.2): typeof window.THREE =', typeof window.THREE);</script>
@@ -230,476 +253,306 @@
     <script>console.log('Diag OrbitControls (jsdelivr for 0.132.2): typeof window.THREE =', typeof window.THREE, '; typeof window.THREE?.OrbitControls =', typeof window.THREE?.OrbitControls);</script>
 
     <script> 
-        // --- Global Variables (declare here, instantiate in init) ---
         let scene, camera, renderer, controls;
         let terrainMesh, waterMesh;
         let simplex; 
-        let vertexTerrainTypes = []; // Stores terrain type ID for each vertex
+        let vertexTerrainTypes = []; 
+        let placedObjectsGroup; 
+        let placedObjectsData = []; 
         
         const loadingIndicator = document.getElementById('loading-indicator');
         let animationFrameCount = 0; 
 
-        // --- Terrain Types Definition ---
-        const TERRAIN_TYPES = {
-            SAND: 0,
-            GRASS: 1,
-            ROCK: 2,
-            SNOW: 3,
-            LAVA: 4,
-            GRAVEL: 5
-        };
-
+        const TOOL_MODES = { NONE: 'NONE', PAINT: 'PAINT', SCULPT_RAISE: 'SCULPT_RAISE', SCULPT_LOWER: 'SCULPT_LOWER' };
+        const TERRAIN_TYPES = { SAND: 0, GRASS: 1, ROCK: 2, SNOW: 3, LAVA: 4, GRAVEL: 5 };
         const TERRAIN_COLORS = {
-            [TERRAIN_TYPES.SAND]:   new THREE.Color(0xC2B280),
-            [TERRAIN_TYPES.GRASS]:  new THREE.Color(0x559955),
-            [TERRAIN_TYPES.ROCK]:   new THREE.Color(0x888888),
-            [TERRAIN_TYPES.SNOW]:   new THREE.Color(0xFFFFFF),
-            [TERRAIN_TYPES.LAVA]:   new THREE.Color(0xFF4500), // OrangeRed
-            [TERRAIN_TYPES.GRAVEL]: new THREE.Color(0xA9A9A9)  // DarkGray
+            [TERRAIN_TYPES.SAND]:   new THREE.Color(0xC2B280), [TERRAIN_TYPES.GRASS]:  new THREE.Color(0x559955),
+            [TERRAIN_TYPES.ROCK]:   new THREE.Color(0x888888), [TERRAIN_TYPES.SNOW]:   new THREE.Color(0xFFFFFF),
+            [TERRAIN_TYPES.LAVA]:   new THREE.Color(0xFF4500), [TERRAIN_TYPES.GRAVEL]: new THREE.Color(0xA9A9A9)
         };
+        const PLACED_OBJECT_TYPES = { TREE: 'tree', ROCK_OBJ: 'rock_obj' };
         
-        let currentBrushType = TERRAIN_TYPES.GRASS; // Default paint type
+        let currentToolMode = TOOL_MODES.NONE;
+        let currentPaintType = TERRAIN_TYPES.GRASS;
         let brushSize = 10;
-        let isPainting = false;
+        let sculptStrength = 0.5;
+        let isInteracting = false; 
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
+        const initialCameraPosition = new THREE.Vector3(80, 80, 80);
+        const initialCameraTarget = new THREE.Vector3(0, 0, 0);
+        let newTargetPosition = null; 
+        let isFocusTransitioning = false;
+        const focusSmoothingFactor = 0.08;
 
-        // --- Configuration Object ---
         const config = {
-            terrainWidth: 200,
-            terrainDepth: 200,
-            segments: 100,
-            noiseScale: 70,
-            terrainHeightScale: 30,
-            octaves: 4,
-            persistence: 0.5,
-            lacunarity: 2.0,
-            plateauLevel: 0.0, 
-            plateauSmoothing: 0.1,
-            valleyDepthFactor: 1.5,
-            valleyThreshold: -0.2, 
+            terrainWidth: 200, terrainDepth: 200, segments: 100,
+            noiseScale: 70, terrainHeightScale: 30, octaves: 4, persistence: 0.5, lacunarity: 2.0,
+            plateauLevel: 0.0, plateauSmoothing: 0.1, valleyDepthFactor: 1.5, valleyThreshold: -0.2, 
             waterLevel: 0,
+            treePlacementProbability: 0.02, rockPlacementProbability: 0.01,
+            minDistance: 20, maxDistance: 500,
         };
 
-        // --- UI Element References and Event Listeners ---
         function setupUI() {
             console.log("LOG: setupUI() called.");
-            const inputs = [
+            const uiInputs = [
                 'terrainWidth', 'terrainDepth', 'segments', 'noiseScale', 
                 'terrainHeightScale', 'octaves', 'persistence', 'lacunarity',
-                'plateauLevel', 'plateauSmoothing', 'valleyDepthFactor', 'valleyThreshold', 'waterLevel'
+                'plateauLevel', 'plateauSmoothing', 'valleyDepthFactor', 'valleyThreshold', 'waterLevel',
+                'brushSize', 'sculptStrength', 'minDistance', 'maxDistance'
             ];
-
-            inputs.forEach(id => {
+            uiInputs.forEach(id => {
                 const inputElement = document.getElementById(id);
                 const valueElement = document.getElementById(id + 'Val');
                 if (inputElement) {
-                    inputElement.value = config[id]; 
-                    if (valueElement) valueElement.textContent = config[id]; 
+                    let initialValue;
+                    if (id === 'brushSize') initialValue = brushSize;
+                    else if (id === 'sculptStrength') initialValue = sculptStrength;
+                    else initialValue = config[id];
+                    inputElement.value = initialValue; 
+                    if (valueElement) valueElement.textContent = initialValue; 
                     inputElement.addEventListener('input', (event) => {
-                        const oldValue = config[id];
-                        config[id] = id === 'segments' || id === 'octaves' ? parseInt(event.target.value) : parseFloat(event.target.value);
+                        const parsedValue = parseFloat(event.target.value);
+                        if (id === 'brushSize') brushSize = parsedValue;
+                        else if (id === 'sculptStrength') sculptStrength = parsedValue;
+                        else if (id === 'segments' || id === 'octaves') config[id] = parseInt(event.target.value);
+                        else config[id] = parsedValue;
                         if (valueElement) valueElement.textContent = event.target.value;
+                        if (controls) {
+                            if (id === 'minDistance') controls.minDistance = parsedValue;
+                            if (id === 'maxDistance') controls.maxDistance = parsedValue;
+                        }
                     });
                 }
             });
+            document.getElementById('regenerateButton')?.addEventListener('click', handleRegenerateClick);
+            document.getElementById('saveTerrainButton')?.addEventListener('click', saveTerrainData);
+            document.getElementById('loadTerrainInput')?.addEventListener('change', loadTerrainData);
+            document.getElementById('resetCameraButton')?.addEventListener('click', resetCamera);
             
-            const regenerateButton = document.getElementById('regenerateButton');
-            if (regenerateButton) {
-                regenerateButton.addEventListener('click', () => {
-                    console.log("LOG: UI Event - 'Regenerate Terrain' button clicked.");
-                    if (!simplex || typeof simplex.noise2D !== 'function') { 
-                        displayGlobalError("SimplexNoise not properly initialized. Cannot regenerate terrain.", "simplex-runtime-error");
-                        return;
+            const toolButtons = document.querySelectorAll('.tool-button');
+            const navigateToolButton = document.getElementById('navigateToolButton');
+
+            function setActiveToolButton(activeButton) {
+                toolButtons.forEach(btn => btn.classList.remove('active'));
+                if (activeButton) activeButton.classList.add('active');
+                
+                if (renderer && renderer.domElement) { // Ensure renderer is available
+                    renderer.domElement.style.cursor = (currentToolMode !== TOOL_MODES.NONE) ? 'crosshair' : 'default';
+                }
+
+                // Configure OrbitControls mouse buttons based on the current tool
+                if (controls) {
+                    if (currentToolMode === TOOL_MODES.NONE) {
+                        controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+                        console.log("LOG: OrbitControls LEFT mouse button set to ROTATE (Navigate mode).");
+                    } else {
+                        // For PAINT or SCULPT modes, disable left-click rotation by OrbitControls
+                        // Setting to an unused/invalid button or a non-rotating action
+                        controls.mouseButtons.LEFT = -1; // Or another value that OrbitControls doesn't map to rotate
+                        console.log("LOG: OrbitControls LEFT mouse button action disabled (Tool mode).");
                     }
-                    showLoading();
-                    setTimeout(() => {
-                        createOrUpdateTerrain();
-                        hideLoading();
-                    }, 50); 
-                });
+                    // Right mouse for panning and middle for dolly should remain consistent
+                    controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+                    controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+                }
             }
 
-            const saveTerrainButton = document.getElementById('saveTerrainButton');
-            if (saveTerrainButton) {
-                saveTerrainButton.addEventListener('click', () => {
-                    console.log("LOG: UI Event - 'Save Terrain Data' button clicked.");
-                    saveTerrainData();
-                });
-            }
-            
-            // Painting UI
-            const brushSizeInput = document.getElementById('brushSize');
-            const brushSizeVal = document.getElementById('brushSizeVal');
-            if (brushSizeInput && brushSizeVal) {
-                brushSizeInput.value = brushSize;
-                brushSizeVal.textContent = brushSize;
-                brushSizeInput.addEventListener('input', (event) => {
-                    brushSize = parseFloat(event.target.value);
-                    brushSizeVal.textContent = brushSize;
-                    console.log("LOG: Brush size changed to:", brushSize);
-                });
-            }
-
-            const paintTypeButtons = document.querySelectorAll('.paint-type-button');
-            paintTypeButtons.forEach(button => {
+            toolButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    currentBrushType = TERRAIN_TYPES[button.dataset.type];
-                    console.log("LOG: Selected brush type:", button.dataset.type, "(ID:", currentBrushType, ")");
-                    paintTypeButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
+                    const tool = button.dataset.tool; 
+                    const type = button.dataset.type; 
+                    currentToolMode = TOOL_MODES[tool] || TOOL_MODES.NONE;
+                    setActiveToolButton(button); // This will now also update controls.mouseButtons
+
+                    if (currentToolMode === TOOL_MODES.PAINT) {
+                        currentPaintType = TERRAIN_TYPES[type]; 
+                        console.log("LOG: Tool switched to PAINT. Type:", type);
+                    } else if (currentToolMode === TOOL_MODES.SCULPT_RAISE || currentToolMode === TOOL_MODES.SCULPT_LOWER) {
+                        console.log("LOG: Tool switched to SCULPT:", currentToolMode);
+                    } else if (currentToolMode === TOOL_MODES.NONE) {
+                        console.log("LOG: Tool switched to Navigate.");
+                    }
                 });
             });
-            // Activate default brush button
-            document.querySelector(`.paint-type-button[data-type="${Object.keys(TERRAIN_TYPES).find(key => TERRAIN_TYPES[key] === currentBrushType)}"]`)?.classList.add('active');
-
-
+            if(navigateToolButton) setActiveToolButton(navigateToolButton);
             console.log("LOG: setupUI() finished.");
         }
-        
-        function showLoading() {
-            if (loadingIndicator) loadingIndicator.style.display = 'block';
-        }
 
-        function hideLoading() {
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
-        }
-
-        function displayGlobalError(message, id = 'generic-error') {
-            const errorDivId = `${id}-message`;
-            let errorDiv = document.getElementById(errorDivId);
-            if (!errorDiv) {
-                errorDiv = document.createElement('div');
-                errorDiv.id = errorDivId;
-                errorDiv.className = 'critical-error-message'; 
-                document.body.appendChild(errorDiv);
+        function resetCamera() {
+            console.log("LOG: Resetting camera.");
+            if (camera && controls) {
+                camera.position.copy(initialCameraPosition);
+                controls.target.copy(initialCameraTarget);
+                controls.update(); 
+                newTargetPosition = null; 
+                isFocusTransitioning = false;
+                console.log("LOG: Camera reset to default position and target.");
             }
-            errorDiv.textContent = message;
-            console.error(`ERROR_DISPLAY [${id}]: ${message}`); 
         }
 
-        // --- Initialization ---
+        function handleRegenerateClick() { console.log("LOG: Regenerate Clicked"); if(!simplex||typeof simplex.noise2D !== 'function'){displayGlobalError("Simplex Error", "simplex-err"); return;} showLoading(); setTimeout(()=>{createOrUpdateTerrain();placeObjects();hideLoading();},50); }
+        function showLoading() { if(loadingIndicator)loadingIndicator.style.display = 'block'; }
+        function hideLoading() { if(loadingIndicator)loadingIndicator.style.display = 'none'; }
+        function displayGlobalError(message,id='generic-error') { const eId=`${id}-message`;let eDiv=document.getElementById(eId);if(!eDiv){eDiv=document.createElement('div');eDiv.id=eId;eDiv.className='critical-error-message';document.body.appendChild(eDiv);}eDiv.textContent=message;console.error(`ERR [${id}]: ${message}`);}
+        
+        function updateUIFromConfig(loadedConfig = config, loadedToolSettings = null) {
+            console.log("LOG: updateUIFromConfig called.");
+            for (const key in loadedConfig) {
+                if (config.hasOwnProperty(key)) config[key] = loadedConfig[key];
+            }
+            const uiIds = ['terrainWidth','terrainDepth','segments','noiseScale','terrainHeightScale','octaves','persistence','lacunarity','plateauLevel','plateauSmoothing','valleyDepthFactor','valleyThreshold','waterLevel','minDistance','maxDistance'];
+            uiIds.forEach(id => {
+                const iEl=document.getElementById(id), vEl=document.getElementById(id+'Val');
+                if(iEl&&config.hasOwnProperty(id))iEl.value=config[id]; if(vEl&&config.hasOwnProperty(id))vEl.textContent=config[id];
+                if(controls&&(id==='minDistance'||id==='maxDistance'))controls[id]=config[id];
+            });
+
+            if (loadedToolSettings) {
+                brushSize = loadedToolSettings.brushSize !== undefined ? loadedToolSettings.brushSize : 10;
+                sculptStrength = loadedToolSettings.sculptStrength !== undefined ? loadedToolSettings.sculptStrength : 0.5;
+                currentToolMode = loadedToolSettings.currentToolMode || TOOL_MODES.NONE;
+                currentPaintType = loadedToolSettings.currentPaintType !== undefined ? loadedToolSettings.currentPaintType : TERRAIN_TYPES.GRASS;
+            }
+            const bSInput=document.getElementById('brushSize'),bSVal=document.getElementById('brushSizeVal'); if(bSInput&&bSVal){bSInput.value=brushSize;bSVal.textContent=brushSize;}
+            const sSInput=document.getElementById('sculptStrength'),sSVal=document.getElementById('sculptStrengthVal'); if(sSInput&&sSVal){sSInput.value=sculptStrength;sSVal.textContent=sculptStrength;}
+            
+            // Update active tool button and OrbitControls mouse buttons
+            let activeButtonToSet;
+            if (currentToolMode === TOOL_MODES.PAINT) {
+                const typeKey = Object.keys(TERRAIN_TYPES).find(key => TERRAIN_TYPES[key] === currentPaintType);
+                activeButtonToSet = document.querySelector(`.tool-button[data-tool="PAINT"][data-type="${typeKey}"]`);
+            } else if (currentToolMode !== TOOL_MODES.NONE) {
+                activeButtonToSet = document.querySelector(`.tool-button[data-tool="${currentToolMode}"]`);
+            } else { 
+                activeButtonToSet = document.getElementById('navigateToolButton');
+            }
+            
+            // Call setActiveToolButton from setupUI to consolidate logic
+            const toolButtons = document.querySelectorAll('.tool-button');
+            toolButtons.forEach(btn => btn.classList.remove('active'));
+            if (activeButtonToSet) {
+                 activeButtonToSet.classList.add('active');
+            } else if (document.getElementById('navigateToolButton')) { // Fallback if specific button not found
+                 document.getElementById('navigateToolButton').classList.add('active');
+                 currentToolMode = TOOL_MODES.NONE; // Ensure mode is consistent
+            }
+            
+            // Manually update cursor and OrbitControls based on currentToolMode after potential load
+            if (renderer && renderer.domElement) {
+                renderer.domElement.style.cursor = (currentToolMode !== TOOL_MODES.NONE) ? 'crosshair' : 'default';
+            }
+            if (controls) {
+                if (currentToolMode === TOOL_MODES.NONE) {
+                    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+                } else {
+                    controls.mouseButtons.LEFT = -1; // Disable left-click rotate for tools
+                }
+                controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+                controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+            }
+        }
+
         function init() {
-            console.log("LOG: init() called via window.onload.");
+            console.log("LOG: init() called.");
+            try { if (typeof window.SimplexNoise === 'function') simplex = new window.SimplexNoise(); else throw new Error("SimplexNoise not constructor."); } 
+            catch (e) { displayGlobalError(`CRITICAL: SimplexNoise init: ${e.message}.`, "simplex-error"); simplex = { noise2D: () => 0 }; }
 
-            try {
-                if (typeof window.SimplexNoise === 'function') {
-                    simplex = new window.SimplexNoise();
-                } else {
-                    throw new Error("window.SimplexNoise is not a constructor.");
-                }
-            } catch (e) {
-                displayGlobalError(`CRITICAL: SimplexNoise failed to initialize: ${e.message}.`, "simplex-init-error");
-                simplex = { noise2D: () => 0 }; 
-            }
-
-            try {
-                if (typeof THREE === 'undefined') { 
-                    throw new Error("THREE (Three.js main object) is undefined.");
-                }
-                scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x87CEEB); 
-                scene.fog = new THREE.Fog(0x87CEEB, 100, 600);
-
+            try { 
+                if (typeof THREE === 'undefined') throw new Error("THREE undefined.");
+                scene = new THREE.Scene(); scene.background = new THREE.Color(0x87CEEB); scene.fog = new THREE.Fog(0x87CEEB, 100, 600);
                 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                camera.position.set(80, 80, 80);
-
-                renderer = new THREE.WebGLRenderer({ antialias: true });
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                renderer.shadowMap.enabled = true;
-                document.body.appendChild(renderer.domElement);
                 
-                // Add mouse event listeners for painting to the renderer's DOM element
-                renderer.domElement.addEventListener('mousedown', onTerrainMouseDown, false);
-                renderer.domElement.addEventListener('mousemove', onTerrainMouseMove, false);
-                renderer.domElement.addEventListener('mouseup', onTerrainMouseUp, false);
-                // Prevent context menu on right click to allow OrbitControls pan
-                renderer.domElement.addEventListener('contextmenu', (event) => event.preventDefault());
+                renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled = true;
+                document.body.appendChild(renderer.domElement);
+                renderer.domElement.addEventListener('mousedown', onTerrainMouseDown);
+                renderer.domElement.addEventListener('mousemove', onTerrainMouseMove);
+                renderer.domElement.addEventListener('mouseup', onTerrainMouseUp);
+                renderer.domElement.addEventListener('dblclick', onTerrainDoubleClick); 
+                renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+            } catch (e) { displayGlobalError(`CRITICAL: THREE.js core init: ${e.message}.`, "three-core-error"); return; }
 
+            const ambL = new THREE.AmbientLight(0xffffff,0.6); scene.add(ambL);
+            const dirL = new THREE.DirectionalLight(0xffffff,0.8); dirL.position.set(50,100,50); dirL.castShadow=true; dirL.shadow.mapSize.set(2048,2048); scene.add(dirL);
 
-            } catch (e) {
-                displayGlobalError(`CRITICAL: Failed to initialize core Three.js objects: ${e.message}.`, "three-core-init-error");
-                return; 
-            }
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(50, 100, 50);
-            directionalLight.castShadow = true;
-            directionalLight.shadow.mapSize.width = 2048;
-            directionalLight.shadow.mapSize.height = 2048;
-            scene.add(directionalLight);
-
-            try {
-                if (typeof window.THREE !== 'undefined' && typeof window.THREE.OrbitControls === 'function') {
-                    controls = new window.THREE.OrbitControls(camera, renderer.domElement);
-                    controls.enableDamping = true;
-                    controls.dampingFactor = 0.05;
-                    controls.screenSpacePanning = true; // Allow panning with right mouse
-                    controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
-                } else {
-                     throw new Error("THREE.OrbitControls is not a constructor or THREE is undefined.");
-                }
-            } catch (e) {
-                 displayGlobalError(`CRITICAL: THREE.OrbitControls failed to initialize: ${e.message}.`, "orbitcontrols-init-error");
-            }
-
-            setupUI(); 
+            try { 
+                if (THREE && typeof THREE.OrbitControls==='function') {
+                    controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    controls.enableDamping=true; controls.dampingFactor=0.05; controls.screenSpacePanning=true;
+                    // Initial mouse button setup will be handled by setActiveToolButton called via setupUI -> updateUIFromConfig
+                    controls.minDistance = config.minDistance; controls.maxDistance = config.maxDistance;
+                    resetCamera(); // Set initial position AND target
+                } else throw new Error("OrbitControls not found on THREE object.");
+            } catch (e) { displayGlobalError(`CRITICAL: OrbitControls init failed: ${e.message}.`, "orbitcontrols-error"); }
+            
+            placedObjectsGroup = new THREE.Group(); scene.add(placedObjectsGroup);
+            setupUI(); // This will also call setActiveToolButton for the default (Navigate)
             showLoading();
-            setTimeout(() => {
-                 createOrUpdateTerrain();
-                 hideLoading();
-            }, 50);
-
-            window.addEventListener('resize', onWindowResize, false);
-            animate();
-            console.log("LOG: init() finished successfully.");
+            setTimeout(() => { createOrUpdateTerrain(); placeObjects(); hideLoading(); }, 50);
+            window.addEventListener('resize', onWindowResize); animate();
+            console.log("LOG: init() finished.");
         }
 
-        // --- Terrain Generation ---
-        function getNoise(x, y, noiseScale, octaves, persistence, lacunarity) {
-            let total = 0;
-            let frequency = 1;
-            let amplitude = 1;
-            let maxValue = 0; 
-            for (let i = 0; i < octaves; i++) {
-                if (simplex && typeof simplex.noise2D === 'function') {
-                    total += simplex.noise2D(x * frequency / noiseScale, y * frequency / noiseScale) * amplitude;
-                } else { return 0; }
-                maxValue += amplitude;
-                amplitude *= persistence;
-                frequency *= lacunarity;
+        // --- Terrain Generation (getNoise, createOrUpdateTerrain) - Minified ---
+        function getNoise(x,y,s,o,p,l) { let t=0,f=1,a=1,m=0;for(let i=0;i<o;i++){if(simplex&&typeof simplex.noise2D==='function')t+=simplex.noise2D(x*f/s,y*f/s)*a;else return 0;m+=a;a*=p;f*=l;}return m===0?0:t/m; }
+        function createOrUpdateTerrain(loadedPositionsArray = null, loadedTerrainTypesArray = null) {
+            if(!scene||!THREE){return;} if(terrainMesh){scene.remove(terrainMesh);terrainMesh.geometry.dispose();terrainMesh.material.dispose();} if(waterMesh){scene.remove(waterMesh);waterMesh.geometry.dispose();waterMesh.material.dispose();}
+            const geo=new THREE.PlaneGeometry(config.terrainWidth,config.terrainDepth,config.segments,config.segments); geo.rotateX(-Math.PI/2);
+            const pos=geo.attributes.position; const nClrs=new Float32Array(pos.count*3); vertexTerrainTypes=loadedTerrainTypesArray?new Uint8Array(loadedTerrainTypesArray):new Uint8Array(pos.count); const tCol=new THREE.Color();
+            for(let i=0;i<pos.count;i++){ if(loadedPositionsArray){pos.setXYZ(i,loadedPositionsArray[i*3],loadedPositionsArray[i*3+1],loadedPositionsArray[i*3+2]);}else{const x=pos.getX(i),z=pos.getZ(i);let nV=getNoise(x,z,config.noiseScale,config.octaves,config.persistence,config.lacunarity);if(nV<config.valleyThreshold&&Math.abs(config.valleyThreshold)>1e-5)nV*=1+(config.valleyThreshold-nV)*(config.valleyDepthFactor-1)/Math.abs(config.valleyThreshold);let y=nV*config.terrainHeightScale;if(config.plateauLevel>0){const hs=config.terrainHeightScale===0?1:config.terrainHeightScale,nH=(y/hs+1)/2;if(nH>config.plateauLevel)y=THREE.MathUtils.lerp(y,config.plateauLevel*hs*2-hs,1-THREE.MathUtils.smoothstep(nH-config.plateauLevel,0,config.plateauSmoothing));}pos.setY(i,y);}
+            let tId; if(loadedTerrainTypesArray)tId=vertexTerrainTypes[i];else{const yP=pos.getY(i);if(yP<config.waterLevel+2)tId=TERRAIN_TYPES.SAND;else if(yP<config.waterLevel+15)tId=TERRAIN_TYPES.GRASS;else if(yP<config.terrainHeightScale*0.6)tId=TERRAIN_TYPES.ROCK;else tId=TERRAIN_TYPES.SNOW;vertexTerrainTypes[i]=tId;}
+            tCol.set(TERRAIN_COLORS[tId]||TERRAIN_COLORS[TERRAIN_TYPES.GRASS]);nClrs[i*3]=tCol.r;nClrs[i*3+1]=tCol.g;nClrs[i*3+2]=tCol.b;}
+            if(loadedPositionsArray)pos.needsUpdate=true;geo.setAttribute('color',new THREE.BufferAttribute(nClrs,3));geo.computeVertexNormals();
+            const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,metalness:0.2});terrainMesh=new THREE.Mesh(geo,mat);terrainMesh.castShadow=true;terrainMesh.receiveShadow=true;scene.add(terrainMesh);
+            const wg=new THREE.PlaneGeometry(config.terrainWidth*1.5,config.terrainDepth*1.5,1,1);wg.rotateX(-Math.PI/2);const wm=new THREE.MeshStandardMaterial({color:0x336699,transparent:true,opacity:0.7,roughness:0.1,metalness:0.3});waterMesh=new THREE.Mesh(wg,wm);waterMesh.position.y=config.waterLevel;scene.add(waterMesh);
+            const dL=scene.children.find(c=>c.type==="DirectionalLight");if(dL){dL.shadow.camera.left=-config.terrainWidth/1.8;dL.shadow.camera.right=config.terrainWidth/1.8;dL.shadow.camera.top=config.terrainDepth/1.8;dL.shadow.camera.bottom=-config.terrainDepth/1.8;dL.shadow.camera.updateProjectionMatrix();}
+        }
+
+        // --- Mouse Interaction: Painting, Sculpting, Focusing ---
+        function onTerrainMouseDown(e){
+            if(e.button===0 && currentToolMode !== TOOL_MODES.NONE){
+                isInteracting=true;
+                // No longer disabling controls here, mouseButton config handles it.
+                handleTerrainInteraction(e);
+                console.log("LOG: Interaction started with tool:", currentToolMode);
             }
-            return maxValue === 0 ? 0 : total / maxValue; 
+        }
+        function onTerrainMouseMove(e){
+            if(isInteracting && currentToolMode !== TOOL_MODES.NONE){
+                handleTerrainInteraction(e);
+            }
+        }
+        function onTerrainMouseUp(e){
+            if(e.button===0){
+                if(isInteracting){
+                    console.log("LOG: Interaction ended with tool:", currentToolMode);
+                }
+                isInteracting=false;
+                // No longer enabling controls here.
+                if(terrainMesh&&terrainMesh.geometry&&terrainMesh.geometry.attributes.position.needsUpdate){
+                    terrainMesh.geometry.computeVertexNormals();
+                    terrainMesh.geometry.attributes.position.needsUpdate=false;
+                    console.log("LOG: Normals recomputed on mouse up after sculpting.");
+                }
+            }
         }
         
-        function createOrUpdateTerrain() {
-            console.log("LOG: createOrUpdateTerrain() called.");
-            if (!scene) { 
-                console.error("LOG: createOrUpdateTerrain - Scene not initialized. Aborting.");
-                return;
-            }
-            
-            if (terrainMesh) {
-                scene.remove(terrainMesh);
-                terrainMesh.geometry.dispose();
-                terrainMesh.material.dispose();
-            }
-            if (waterMesh) {
-                scene.remove(waterMesh);
-                waterMesh.geometry.dispose();
-                waterMesh.material.dispose();
-            }
+        function onTerrainDoubleClick(event) { /* Unchanged */ console.log("LOG: DblClick"); if(!terrainMesh||!camera||!controls)return;if(currentToolMode!==TOOL_MODES.NONE&&isInteracting)return;mouse.set((event.clientX/window.innerWidth)*2-1,-(event.clientY/window.innerHeight)*2+1);raycaster.setFromCamera(mouse,camera);const ints=raycaster.intersectObject(terrainMesh);if(ints.length>0){newTargetPosition=ints[0].point.clone();isFocusTransitioning=true;}}
+        function handleTerrainInteraction(event) { /* Unchanged */ if(!terrainMesh||!camera||currentToolMode===TOOL_MODES.NONE)return;mouse.set((event.clientX/window.innerWidth)*2-1,-(event.clientY/window.innerHeight)*2+1);raycaster.setFromCamera(mouse,camera);const ints=raycaster.intersectObject(terrainMesh);if(ints.length>0){const iPt=ints[0].point,pos=terrainMesh.geometry.attributes.position,cols=terrainMesh.geometry.attributes.color;let cC=false,pC=false;const tV=new THREE.Vector3();for(let i=0;i<pos.count;i++){tV.fromBufferAttribute(pos,i);if(tV.distanceTo(iPt)<brushSize){if(currentToolMode===TOOL_MODES.PAINT){const pTCol=TERRAIN_COLORS[currentPaintType];if(vertexTerrainTypes[i]!==currentPaintType){vertexTerrainTypes[i]=currentPaintType;cols.setXYZ(i,pTCol.r,pTCol.g,pTCol.b);cC=true;}}else if(currentToolMode===TOOL_MODES.SCULPT_RAISE){pos.setY(i,pos.getY(i)+sculptStrength);pC=true;}else if(currentToolMode===TOOL_MODES.SCULPT_LOWER){pos.setY(i,pos.getY(i)-sculptStrength);pC=true;}}}if(cC)cols.needsUpdate=true;if(pC)pos.needsUpdate=true;}}
 
-            const geometry = new THREE.PlaneGeometry( config.terrainWidth, config.terrainDepth, config.segments, config.segments );
-            geometry.rotateX(-Math.PI / 2); 
+        // --- Procedural Object Placement & Load/Save (Minified) ---
+        function placeObjects() { /* ... */ while(placedObjectsGroup.children.length>0){const o=placedObjectsGroup.children[0];placedObjectsGroup.remove(o);if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();}placedObjectsData=[];if(!terrainMesh||!vertexTerrainTypes||vertexTerrainTypes.length===0)return;const tp=terrainMesh.geometry.attributes.position;let pc={tree:0,rock_obj:0};for(let i=0;i<tp.count;i++){const tt=vertexTerrainTypes[i],x=tp.getX(i),ys=tp.getY(i),z=tp.getZ(i);if(tt===TERRAIN_TYPES.GRASS&&Math.random()<config.treePlacementProbability){const th=2+Math.random()*3,ts=0.5+Math.random()*0.5,tg=new THREE.BoxGeometry(ts,th,ts),tm=new THREE.MeshStandardMaterial({color:0x228B22}),t=new THREE.Mesh(tg,tm);t.position.set(x,ys+th/2,z);t.castShadow=true;t.receiveShadow=true;placedObjectsGroup.add(t);placedObjectsData.push({type:PLACED_OBJECT_TYPES.TREE,position:{x:t.position.x,y:t.position.y,z:t.position.z},scale:{x:ts,y:th,z:ts}});pc.tree++;}else if(tt===TERRAIN_TYPES.ROCK&&Math.random()<config.rockPlacementProbability){const rr=0.5+Math.random()*1,rg=new THREE.SphereGeometry(rr,8,6),rm=new THREE.MeshStandardMaterial({color:0x696969}),r=new THREE.Mesh(rg,rm);r.position.set(x,ys+rr,z);r.castShadow=true;r.receiveShadow=true;placedObjectsGroup.add(r);placedObjectsData.push({type:PLACED_OBJECT_TYPES.ROCK_OBJ,position:{x:r.position.x,y:r.position.y,z:r.position.z},scale:{radius:rr}});pc.rock_obj++;}}console.log(`LOG: Placed ${pc.tree} trees, ${pc.rock_obj} rocks.`); }
+        function loadAndPlaceSavedObjects(savedObjs) { /* ... */ while(placedObjectsGroup.children.length>0){const o=placedObjectsGroup.children[0];placedObjectsGroup.remove(o);if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();}placedObjectsData=[];savedObjs.forEach(od=>{let m;if(od.type===PLACED_OBJECT_TYPES.TREE){const th=od.scale?.y||3,ts=od.scale?.x||.75,tg=new THREE.BoxGeometry(ts,th,ts),tm=new THREE.MeshStandardMaterial({color:0x228B22});m=new THREE.Mesh(tg,tm);}else if(od.type===PLACED_OBJECT_TYPES.ROCK_OBJ){const rr=od.scale?.radius||1,rg=new THREE.SphereGeometry(rr,8,6),rm=new THREE.MeshStandardMaterial({color:0x696969});m=new THREE.Mesh(rg,rm);}if(m){m.position.set(od.position.x,od.position.y,od.position.z);m.castShadow=true;m.receiveShadow=true;placedObjectsGroup.add(m);placedObjectsData.push(od);}}); }
+        function saveTerrainData() { /* Unchanged */ if(!terrainMesh||!terrainMesh.geometry){displayGlobalError("No terrain.","save-no");return;}const ga=terrainMesh.geometry.attributes;if(!ga.position||!vertexTerrainTypes||vertexTerrainTypes.length!==ga.position.count){displayGlobalError("Incomplete data.","save-inc");return;}const sd={version:"1.2",config:JSON.parse(JSON.stringify(config)),toolSettings:{currentToolMode,currentPaintType,brushSize,sculptStrength},cameraState:{position:camera.position.toArray(),target:controls?controls.target.toArray():initialCameraTarget.toArray()},geometry:{positions:Array.from(ga.position.array),terrainTypes:Array.from(vertexTerrainTypes)},placedObjects:JSON.parse(JSON.stringify(placedObjectsData))};try{const j=JSON.stringify(sd,null,2),b=new Blob([j],{type:'application/json'}),u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`terrain_v1.2_${Date.now()}.json`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);console.log("LOG: Terrain data saved.");}catch(e){displayGlobalError("Save failed: "+e.message,"save-err");}}
+        function loadTerrainData(event) { /* Unchanged */ const f=event.target.files[0];if(!f)return;const r=new FileReader();r.onload=(e)=>{try{const ld=JSON.parse(e.target.result);if(!ld.config||!ld.geometry||!ld.geometry.positions||!ld.geometry.terrainTypes)throw new Error("Invalid file format.");for(const key in ld.config)if(config.hasOwnProperty(key))config[key]=ld.config[key];if(ld.toolSettings){brushSize=ld.toolSettings.brushSize??10;sculptStrength=ld.toolSettings.sculptStrength??0.5;currentToolMode=ld.toolSettings.currentToolMode||TOOL_MODES.NONE;currentPaintType=ld.toolSettings.currentPaintType??TERRAIN_TYPES.GRASS;}updateUIFromConfig(config,ld.toolSettings);if(ld.cameraState&&camera&&controls){camera.position.fromArray(ld.cameraState.position);controls.target.fromArray(ld.cameraState.target);controls.update();newTargetPosition=controls.target.clone();isFocusTransitioning=false;}else{resetCamera();}showLoading();setTimeout(()=>{createOrUpdateTerrain(ld.geometry.positions,ld.geometry.terrainTypes);if(ld.placedObjects&&Array.isArray(ld.placedObjects))loadAndPlaceSavedObjects(ld.placedObjects);else placeObjects();hideLoading();},50);}catch(err){displayGlobalError(`Load error: ${err.message}`,"load-err");}finally{event.target.value=null;}};r.onerror=(e)=>{displayGlobalError("File read error.","load-file-err");event.target.value=null;};r.readAsText(f);}
 
-            const positions = geometry.attributes.position;
-            const colors = new Float32Array(positions.count * 3);
-            vertexTerrainTypes = new Uint8Array(positions.count); // Reset or initialize terrain types
-
-            const tempColor = new THREE.Color(); // For temporary color calculations
-
-            for (let i = 0; i < positions.count; i++) {
-                const x = positions.getX(i);
-                const z = positions.getZ(i); 
-                let noiseVal = getNoise(x, z, config.noiseScale, config.octaves, config.persistence, config.lacunarity);
-                
-                if (noiseVal < config.valleyThreshold && Math.abs(config.valleyThreshold) > 1e-5) {
-                    const depthFactor = 1 + (config.valleyThreshold - noiseVal) * (config.valleyDepthFactor -1) / Math.abs(config.valleyThreshold);
-                    noiseVal *= depthFactor;
-                }
-                let y = noiseVal * config.terrainHeightScale;
-
-                if (config.plateauLevel > 0) {
-                    const heightScaleForNorm = config.terrainHeightScale === 0 ? 1 : config.terrainHeightScale;
-                    const normalizedHeight = (y / heightScaleForNorm + 1) / 2; 
-                    if (normalizedHeight > config.plateauLevel) {
-                        const diff = normalizedHeight - config.plateauLevel;
-                        const t = THREE.MathUtils.smoothstep(diff, 0, config.plateauSmoothing); 
-                        y = THREE.MathUtils.lerp(y, config.plateauLevel * heightScaleForNorm * 2 - heightScaleForNorm, 1 - t); 
-                    }
-                }
-                positions.setY(i, y);
-
-                // Initial terrain type assignment based on height
-                let typeId;
-                if (y < config.waterLevel + 2) { 
-                    typeId = TERRAIN_TYPES.SAND;
-                } else if (y < config.waterLevel + 15) {
-                    typeId = TERRAIN_TYPES.GRASS;
-                } else if (y < config.terrainHeightScale * 0.6) {
-                    typeId = TERRAIN_TYPES.ROCK;
-                } else {
-                    typeId = TERRAIN_TYPES.SNOW;
-                }
-                vertexTerrainTypes[i] = typeId;
-                
-                tempColor.set(TERRAIN_COLORS[typeId]);
-                colors[i * 3]     = tempColor.r;
-                colors[i * 3 + 1] = tempColor.g;
-                colors[i * 3 + 2] = tempColor.b;
-            }
-
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); 
-            geometry.computeVertexNormals(); 
-
-            const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.2 });
-            terrainMesh = new THREE.Mesh(geometry, material);
-            terrainMesh.castShadow = true;
-            terrainMesh.receiveShadow = true;
-            scene.add(terrainMesh);
-
-            const waterGeometry = new THREE.PlaneGeometry(config.terrainWidth * 1.5, config.terrainDepth * 1.5, 1, 1);
-            waterGeometry.rotateX(-Math.PI / 2);
-            const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x336699, transparent: true, opacity: 0.7, roughness: 0.1, metalness: 0.3 });
-            waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
-            waterMesh.position.y = config.waterLevel; 
-            waterMesh.receiveShadow = true;
-            scene.add(waterMesh);
-            
-            const dirLight = scene.children.find(c => c.type === "DirectionalLight");
-            if (dirLight) {
-                dirLight.shadow.camera.left = -config.terrainWidth / 1.8; 
-                dirLight.shadow.camera.right = config.terrainWidth / 1.8;
-                dirLight.shadow.camera.top = config.terrainDepth / 1.8;
-                dirLight.shadow.camera.bottom = -config.terrainDepth / 1.8;
-                dirLight.shadow.camera.updateProjectionMatrix();
-            }
-            console.log("LOG: createOrUpdateTerrain() finished.");
-        }
-
-        // --- Terrain Painting ---
-        function onTerrainMouseDown(event) {
-            if (event.button === 0) { // Left mouse button
-                isPainting = true;
-                if (controls) controls.enabled = false; // Disable camera controls while painting
-                paintTerrain(event); // Paint on initial click
-                 console.log("LOG: Painting started.");
-            }
-        }
-
-        function onTerrainMouseMove(event) {
-            if (isPainting) {
-                paintTerrain(event);
-            }
-        }
-
-        function onTerrainMouseUp(event) {
-            if (event.button === 0) {
-                isPainting = false;
-                if (controls) controls.enabled = true; // Re-enable camera controls
-                console.log("LOG: Painting stopped.");
-            }
-        }
-
-        function paintTerrain(event) {
-            if (!terrainMesh || !camera) return;
-
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-
-            const intersects = raycaster.intersectObject(terrainMesh);
-
-            if (intersects.length > 0) {
-                const intersectionPoint = intersects[0].point;
-                const positions = terrainMesh.geometry.attributes.position;
-                const colors = terrainMesh.geometry.attributes.color;
-                let changed = false;
-                const tempVertex = new THREE.Vector3();
-                const paintColor = TERRAIN_COLORS[currentBrushType];
-
-                for (let i = 0; i < positions.count; i++) {
-                    tempVertex.fromBufferAttribute(positions, i); // Get vertex world position
-                    // Note: For a PlaneGeometry rotated flat, this tempVertex is already effectively in world space relative to terrainMesh's origin.
-                    // If terrainMesh had transformations, we'd use terrainMesh.localToWorld(tempVertex);
-                    
-                    const distance = tempVertex.distanceTo(intersectionPoint);
-
-                    if (distance < brushSize) {
-                        if (vertexTerrainTypes[i] !== currentBrushType) {
-                            vertexTerrainTypes[i] = currentBrushType;
-                            colors.setXYZ(i, paintColor.r, paintColor.g, paintColor.b);
-                            changed = true;
-                        }
-                    }
-                }
-                if (changed) {
-                    colors.needsUpdate = true;
-                   // console.log("LOG: Terrain painted. Vertices updated.");
-                }
-            }
-        }
-
-
-        // --- Terrain Saving ---
-        function saveTerrainData() {
-            console.log("LOG: saveTerrainData() called.");
-            if (!terrainMesh || !terrainMesh.geometry) {
-                displayGlobalError("No terrain data to save. Please generate terrain first.", "save-terrain-no-data");
-                return;
-            }
-            const geomAttrs = terrainMesh.geometry.attributes;
-            if (!geomAttrs.position || !geomAttrs.color || !vertexTerrainTypes || vertexTerrainTypes.length !== geomAttrs.position.count) {
-                displayGlobalError("Terrain data is incomplete or corrupted. Cannot save.", "save-terrain-incomplete");
-                return;
-            }
-            
-            const terrainData = {
-                config: JSON.parse(JSON.stringify(config)),
-                geometry: {
-                    positions: Array.from(geomAttrs.position.array),
-                    // colors: Array.from(geomAttrs.color.array), // Colors are now derived from types
-                    terrainTypes: Array.from(vertexTerrainTypes) // Save the type IDs
-                }
-            };
-
-            try {
-                const jsonString = JSON.stringify(terrainData, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `terrain_data_painted_${Date.now()}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } catch (error) {
-                displayGlobalError("Failed to stringify or save terrain data.", "save-terrain-stringify-error");
-            }
-        }
-
-        // --- Animation Loop ---
-        function animate() {
-            requestAnimationFrame(animate);
-            if (animationFrameCount === 0 && renderer) { 
-                console.log("LOG: animate() - First frame requested.");
-            }
-            animationFrameCount++;
-
-            if (controls) controls.update(); 
-            if (renderer && scene && camera) renderer.render(scene, camera);
-        }
-
-        // --- Event Handlers ---
-        function onWindowResize() {
-            if (camera && renderer) { 
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-        }
-
-        // --- Start Application ---
-        window.onload = () => {
-            console.log("Diag: window.onload event fired. Starting application's init().");
-            init();
-        };
+        // --- Animation & Resize ---
+        function animate(){requestAnimationFrame(animate);if(animationFrameCount++===0&&renderer)console.log("LOG: animate() first frame.");if(isFocusTransitioning&&newTargetPosition&&controls){controls.target.lerp(newTargetPosition,focusSmoothingFactor);if(controls.target.distanceTo(newTargetPosition)<0.01){controls.target.copy(newTargetPosition);isFocusTransitioning=false;newTargetPosition=null;}}if(controls)controls.update();if(renderer&&scene&&camera)renderer.render(scene,camera);}
+        function onWindowResize(){if(camera&&renderer){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);}}
+        
+        window.onload = () => { console.log("Diag: window.onload. Starting init()."); init(); };
     </script>
 </body>
 </html>
