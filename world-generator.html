@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Procedural World Generator</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #controls-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(40, 40, 40, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 300px; /* Fixed width for the controls panel */
+        }
+        .control-group {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        .control-group:last-child {
+            border-bottom: none;
+        }
+        h3 {
+            color: #61dafb;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+        input[type="range"], input[type="number"], select {
+            width: calc(100% - 20px);
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background-color: #333;
+            color: #e0e0e0;
+            box-sizing: border-box;
+        }
+        input[type="range"] {
+            padding: 0; /* Override for range inputs */
+        }
+        button {
+            background-color: #61dafb;
+            color: #1a1a1a;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #82eaff;
+        }
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        #loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5em;
+            color: #fff;
+            background-color: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 8px;
+            display: none; /* Hidden by default */
+            z-index: 100;
+        }
+        canvas { display: block; }
+        /* Style for the custom error message */
+        .critical-error-message { 
+            position:fixed; 
+            bottom:20px; 
+            left:50%; 
+            transform:translateX(-50%); 
+            background-color:rgba(220,53,69,0.9); 
+            color:white; 
+            padding:10px 15px; 
+            border-radius:5px; 
+            z-index:10000; 
+            font-size: 0.9em; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+            text-align:center;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="controls-container">
+        <div class="control-group">
+            <h3>Terrain Dimensions</h3>
+            <label for="terrainWidth">Width (units): <span id="terrainWidthVal">200</span></label>
+            <input type="range" id="terrainWidth" min="50" max="500" value="200" step="10">
+            
+            <label for="terrainDepth">Depth (units): <span id="terrainDepthVal">200</span></label>
+            <input type="range" id="terrainDepth" min="50" max="500" value="200" step="10">
+
+            <label for="segments">Segments (complexity): <span id="segmentsVal">100</span></label>
+            <input type="range" id="segments" min="20" max="250" value="100" step="5">
+        </div>
+
+        <div class="control-group">
+            <h3>Noise Parameters</h3>
+            <label for="noiseScale">Noise Scale: <span id="noiseScaleVal">70</span></label>
+            <input type="range" id="noiseScale" min="10" max="200" value="70" step="1">
+            
+            <label for="terrainHeightScale">Max Height: <span id="terrainHeightScaleVal">30</span></label>
+            <input type="range" id="terrainHeightScale" min="5" max="100" value="30" step="1">
+
+            <label for="octaves">Octaves (detail): <span id="octavesVal">4</span></label>
+            <input type="range" id="octaves" min="1" max="8" value="4" step="1">
+
+            <label for="persistence">Persistence (amplitude): <span id="persistenceVal">0.5</span></label>
+            <input type="range" id="persistence" min="0.1" max="1" value="0.5" step="0.05">
+
+            <label for="lacunarity">Lacunarity (frequency): <span id="lacunarityVal">2.0</span></label>
+            <input type="range" id="lacunarity" min="1.5" max="4" value="2.0" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <h3>Terrain Features</h3>
+            <label for="plateauLevel">Plateau Level (0-1, 0=off): <span id="plateauLevelVal">0.0</span></label>
+            <input type="range" id="plateauLevel" min="0" max="1" value="0.0" step="0.05">
+            
+            <label for="plateauSmoothing">Plateau Smoothing: <span id="plateauSmoothingVal">0.1</span></label>
+            <input type="range"id="plateauSmoothing" min="0.01" max="0.5" value="0.1" step="0.01">
+
+            <label for="valleyDepthFactor">Valley Depth Factor: <span id="valleyDepthFactorVal">1.5</span></label>
+            <input type="range" id="valleyDepthFactor" min="1.0" max="5.0" value="1.5" step="0.1">
+            
+            <label for="valleyThreshold">Valley Threshold (-1 to 0): <span id="valleyThresholdVal">-0.2</span></label>
+            <input type="range" id="valleyThreshold" min="-1" max="0" value="-0.2" step="0.05">
+        </div>
+        
+        <div class="control-group">
+            <h3>Coloring</h3>
+            <label for="waterLevel">Water Level (-50 to 50): <span id="waterLevelVal">0</span></label>
+            <input type="range" id="waterLevel" min="-50" max="50" value="0" step="1">
+        </div>
+
+        <button id="regenerateButton">Regenerate Terrain</button>
+    </div>
+
+    <div id="loading-indicator">Generating Terrain...</div>
+    <div id="info">Use mouse to orbit, scroll to zoom, right-click to pan.</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script>console.log('Diag three.js (jsdelivr 0.132.2): typeof window.THREE =', typeof window.THREE);</script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
+    <script>console.log('Diag simplex-noise (2.4.0): typeof window.SimplexNoise =', typeof window.SimplexNoise);</script>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script>console.log('Diag OrbitControls (jsdelivr for 0.132.2): typeof window.THREE =', typeof window.THREE, '; typeof window.THREE?.OrbitControls =', typeof window.THREE?.OrbitControls);</script>
+
+    <script> 
+        // --- Global Variables (declare here, instantiate in init) ---
+        let scene, camera, renderer, controls;
+        let terrainMesh, waterMesh;
+        let simplex; // Will be instantiated in init()
+        
+        const loadingIndicator = document.getElementById('loading-indicator');
+        let animationFrameCount = 0; // For logging animate loop sparsely
+
+        // --- Configuration Object ---
+        const config = {
+            terrainWidth: 200,
+            terrainDepth: 200,
+            segments: 100,
+            noiseScale: 70,
+            terrainHeightScale: 30,
+            octaves: 4,
+            persistence: 0.5,
+            lacunarity: 2.0,
+            plateauLevel: 0.0, 
+            plateauSmoothing: 0.1,
+            valleyDepthFactor: 1.5,
+            valleyThreshold: -0.2, 
+            waterLevel: 0,
+        };
+
+        // --- UI Element References and Event Listeners ---
+        function setupUI() {
+            console.log("LOG: setupUI() called.");
+            const inputs = [
+                'terrainWidth', 'terrainDepth', 'segments', 'noiseScale', 
+                'terrainHeightScale', 'octaves', 'persistence', 'lacunarity',
+                'plateauLevel', 'plateauSmoothing', 'valleyDepthFactor', 'valleyThreshold', 'waterLevel'
+            ];
+
+            inputs.forEach(id => {
+                const inputElement = document.getElementById(id);
+                const valueElement = document.getElementById(id + 'Val');
+                if (inputElement) {
+                    inputElement.value = config[id]; 
+                    if (valueElement) valueElement.textContent = config[id]; 
+                    console.log(`LOG: setupUI - Initialized input '${id}' to ${config[id]}`);
+
+                    inputElement.addEventListener('input', (event) => {
+                        const oldValue = config[id];
+                        config[id] = id === 'segments' || id === 'octaves' ? parseInt(event.target.value) : parseFloat(event.target.value);
+                        if (valueElement) valueElement.textContent = event.target.value;
+                        console.log(`LOG: UI Event - Config '${id}' changed from ${oldValue} to ${config[id]}`);
+                    });
+                } else {
+                    console.warn(`LOG: setupUI - Input element with id '${id}' not found.`);
+                }
+            });
+            
+            const regenerateButton = document.getElementById('regenerateButton');
+            if (regenerateButton) {
+                regenerateButton.addEventListener('click', () => {
+                    console.log("LOG: UI Event - 'Regenerate Terrain' button clicked.");
+                    if (!simplex || typeof simplex.noise2D !== 'function') { 
+                        displayGlobalError("SimplexNoise not properly initialized. Cannot regenerate terrain.", "simplex-runtime-error");
+                        return;
+                    }
+                    showLoading();
+                    console.log("LOG: Initiating terrain regeneration process.");
+                    setTimeout(() => {
+                        createOrUpdateTerrain();
+                        hideLoading();
+                    }, 50); 
+                });
+                console.log("LOG: setupUI - Event listener attached to 'regenerateButton'.");
+            } else {
+                console.warn("LOG: setupUI - 'regenerateButton' not found.");
+            }
+            console.log("LOG: setupUI() finished.");
+        }
+        
+        function showLoading() {
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'block';
+                console.log("LOG: Loading indicator shown.");
+            }
+        }
+
+        function hideLoading() {
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+                console.log("LOG: Loading indicator hidden.");
+            }
+        }
+
+        function displayGlobalError(message, id = 'generic-error') {
+            const errorDivId = `${id}-message`;
+            let errorDiv = document.getElementById(errorDivId);
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = errorDivId;
+                errorDiv.className = 'critical-error-message'; 
+                document.body.appendChild(errorDiv);
+            }
+            errorDiv.textContent = message;
+            console.error(`ERROR_DISPLAY [${id}]: ${message}`); 
+        }
+
+        // --- Initialization ---
+        function init() {
+            console.log("LOG: init() called via window.onload.");
+
+            // Instantiate SimplexNoise
+            console.log("LOG: init() - Attempting to initialize SimplexNoise...");
+            try {
+                if (typeof window.SimplexNoise === 'function') {
+                    simplex = new window.SimplexNoise();
+                    console.log("LOG: init() - SimplexNoise initialized successfully.");
+                } else {
+                    throw new Error("window.SimplexNoise is not a constructor.");
+                }
+            } catch (e) {
+                displayGlobalError(`CRITICAL: SimplexNoise failed to initialize in init(). Error: ${e.message}. Check CDN, network, and logs.`, "simplex-init-error");
+                console.log("LOG: init() - State of window.SimplexNoise during error:", typeof window.SimplexNoise, window.SimplexNoise);
+                simplex = { noise2D: () => { console.warn("LOG: Dummy simplex.noise2D called."); return 0; } }; 
+            }
+
+            // Scene, Camera, Renderer
+            console.log("LOG: init() - Initializing Three.js core objects (Scene, Camera, Renderer)...");
+            try {
+                if (typeof THREE === 'undefined') { 
+                    throw new Error("THREE (Three.js main object) is undefined. Check if three.min.js loaded correctly.");
+                }
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x87CEEB); 
+                scene.fog = new THREE.Fog(0x87CEEB, 100, 600);
+
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(80, 80, 80);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                document.body.appendChild(renderer.domElement);
+                console.log("LOG: init() - Three.js core objects initialized.");
+
+            } catch (e) {
+                displayGlobalError(`CRITICAL: Failed to initialize core Three.js objects. Error: ${e.message}.`, "three-core-init-error");
+                console.error("LOG: init() - Aborting due to Three.js core initialization failure.");
+                return; 
+            }
+
+            // Lighting
+            console.log("LOG: init() - Setting up lighting...");
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 500;
+            scene.add(directionalLight);
+            console.log("LOG: init() - Lighting setup complete.");
+
+            // Controls
+            console.log("LOG: init() - Attempting to initialize THREE.OrbitControls...");
+            try {
+                if (typeof window.THREE !== 'undefined' && typeof window.THREE.OrbitControls === 'function') {
+                    controls = new window.THREE.OrbitControls(camera, renderer.domElement);
+                    controls.enableDamping = true;
+                    controls.dampingFactor = 0.05;
+                    controls.screenSpacePanning = false;
+                    controls.minDistance = 20;
+                    controls.maxDistance = 500;
+                    controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+                    console.log("LOG: init() - THREE.OrbitControls initialized successfully.");
+                } else {
+                     let errorMsg = "THREE.OrbitControls is not a constructor.";
+                     if (typeof window.THREE === 'undefined') errorMsg = "THREE itself is undefined.";
+                     else if (typeof window.THREE.OrbitControls === 'undefined') errorMsg = "THREE.OrbitControls is undefined on the THREE object.";
+                     throw new Error(errorMsg);
+                }
+            } catch (e) {
+                 displayGlobalError(`CRITICAL: THREE.OrbitControls failed to initialize in init(). Error: ${e.message}. Check CDN, network, and logs.`, "orbitcontrols-init-error");
+                 console.log("LOG: init() - State of window.THREE during OrbitControls error:", typeof window.THREE, window.THREE);
+                 if(window.THREE) console.log("LOG: init() - State of window.THREE.OrbitControls during error:", typeof window.THREE.OrbitControls, window.THREE.OrbitControls);
+            }
+
+            console.log("LOG: init() - Calling setupUI().");
+            setupUI(); 
+            
+            console.log("LOG: init() - Performing initial terrain generation.");
+            showLoading();
+            setTimeout(() => {
+                 createOrUpdateTerrain();
+                 hideLoading();
+            }, 50);
+
+            console.log("LOG: init() - Attaching window resize listener.");
+            window.addEventListener('resize', onWindowResize, false);
+            
+            console.log("LOG: init() - Starting animation loop.");
+            animate();
+            console.log("LOG: init() finished successfully.");
+        }
+
+        // --- Terrain Generation ---
+        function getNoise(x, y, noiseScale, octaves, persistence, lacunarity) {
+            let total = 0;
+            let frequency = 1;
+            let amplitude = 1;
+            let maxValue = 0; 
+
+            for (let i = 0; i < octaves; i++) {
+                if (simplex && typeof simplex.noise2D === 'function') {
+                    total += simplex.noise2D(x * frequency / noiseScale, y * frequency / noiseScale) * amplitude;
+                } else {
+                    if (i === 0) console.warn("LOG: getNoise - simplex.noise2D is not available. Returning 0. This may indicate SimplexNoise library failed to load.");
+                    return 0; 
+                }
+                maxValue += amplitude;
+                amplitude *= persistence;
+                frequency *= lacunarity;
+            }
+            return maxValue === 0 ? 0 : total / maxValue; 
+        }
+        
+        function createOrUpdateTerrain() {
+            console.log("LOG: createOrUpdateTerrain() called.");
+            if (!scene) { 
+                console.error("LOG: createOrUpdateTerrain - Scene not initialized. Aborting.");
+                return;
+            }
+            console.log("LOG: createOrUpdateTerrain - Using config:", JSON.parse(JSON.stringify(config))); 
+
+            if (terrainMesh) {
+                scene.remove(terrainMesh);
+                terrainMesh.geometry.dispose();
+                terrainMesh.material.dispose();
+                console.log("LOG: createOrUpdateTerrain - Existing terrainMesh removed and disposed.");
+            }
+            if (waterMesh) {
+                scene.remove(waterMesh);
+                waterMesh.geometry.dispose();
+                waterMesh.material.dispose();
+                console.log("LOG: createOrUpdateTerrain - Existing waterMesh removed and disposed.");
+            }
+
+            console.log("LOG: createOrUpdateTerrain - Creating new terrain PlaneGeometry.");
+            const geometry = new THREE.PlaneGeometry(
+                config.terrainWidth, 
+                config.terrainDepth, 
+                config.segments, 
+                config.segments
+            );
+            geometry.rotateX(-Math.PI / 2); 
+
+            console.log("LOG: createOrUpdateTerrain - Generating terrain height data and colors...");
+            const positions = geometry.attributes.position;
+            const colors = [];
+            const color = new THREE.Color(); 
+
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const z = positions.getZ(i); 
+
+                let noiseVal = getNoise(x, z, config.noiseScale, config.octaves, config.persistence, config.lacunarity);
+                
+                if (noiseVal < config.valleyThreshold && Math.abs(config.valleyThreshold) > 1e-5) {
+                    const depthFactor = 1 + (config.valleyThreshold - noiseVal) * (config.valleyDepthFactor -1) / Math.abs(config.valleyThreshold);
+                    noiseVal *= depthFactor;
+                }
+
+                let y = noiseVal * config.terrainHeightScale;
+
+                if (config.plateauLevel > 0) {
+                    const heightScaleForNorm = config.terrainHeightScale === 0 ? 1 : config.terrainHeightScale;
+                    const normalizedHeight = (y / heightScaleForNorm + 1) / 2; 
+                    if (normalizedHeight > config.plateauLevel) {
+                        const diff = normalizedHeight - config.plateauLevel;
+                        const t = THREE.MathUtils.smoothstep(diff, 0, config.plateauSmoothing); 
+                        y = THREE.MathUtils.lerp(y, config.plateauLevel * heightScaleForNorm * 2 - heightScaleForNorm, 1 - t); 
+                    }
+                }
+                
+                positions.setY(i, y);
+
+                if (y < config.waterLevel + 2) { 
+                    color.setHex(0xC2B280); 
+                } else if (y < config.waterLevel + 15) {
+                    color.setHex(0x559955); 
+                } else if (y < config.terrainHeightScale * 0.6) {
+                    color.setHex(0x888888); 
+                } else {
+                    color.setHex(0xFFFFFF); 
+                }
+                colors.push(color.r, color.g, color.b);
+            }
+            console.log(`LOG: createOrUpdateTerrain - Finished generating ${positions.count} vertices.`);
+
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); 
+            geometry.computeVertexNormals(); 
+            console.log("LOG: createOrUpdateTerrain - Vertex normals computed.");
+
+            const material = new THREE.MeshStandardMaterial({ 
+                vertexColors: true, 
+                roughness: 0.8, 
+                metalness: 0.2,
+            });
+            
+            terrainMesh = new THREE.Mesh(geometry, material);
+            terrainMesh.castShadow = true;
+            terrainMesh.receiveShadow = true;
+            scene.add(terrainMesh);
+            console.log("LOG: createOrUpdateTerrain - Terrain mesh created and added to scene.");
+
+            const waterGeometry = new THREE.PlaneGeometry(config.terrainWidth * 1.5, config.terrainDepth * 1.5, 1, 1);
+            waterGeometry.rotateX(-Math.PI / 2);
+            const waterMaterial = new THREE.MeshStandardMaterial({
+                color: 0x336699, 
+                transparent: true,
+                opacity: 0.7,
+                roughness: 0.1,
+                metalness: 0.3,
+            });
+            waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+            waterMesh.position.y = config.waterLevel; 
+            waterMesh.receiveShadow = true;
+            scene.add(waterMesh);
+            console.log("LOG: createOrUpdateTerrain - Water plane created and added to scene at y:", config.waterLevel);
+            
+            const dirLight = scene.children.find(c => c.type === "DirectionalLight");
+            if (dirLight) {
+                dirLight.shadow.camera.left = -config.terrainWidth / 1.8; 
+                dirLight.shadow.camera.right = config.terrainWidth / 1.8;
+                dirLight.shadow.camera.top = config.terrainDepth / 1.8;
+                dirLight.shadow.camera.bottom = -config.terrainDepth / 1.8;
+                dirLight.shadow.camera.updateProjectionMatrix();
+                console.log("LOG: createOrUpdateTerrain - Directional light shadow camera updated.");
+            }
+            console.log("LOG: createOrUpdateTerrain() finished.");
+        }
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            if (animationFrameCount === 0 && renderer) { 
+                console.log("LOG: animate() - First frame requested.");
+            }
+            animationFrameCount++;
+
+
+            if (controls) { 
+                controls.update(); 
+            }
+            if (renderer && scene && camera) { 
+                renderer.render(scene, camera);
+            }
+        }
+
+        // --- Event Handlers ---
+        function onWindowResize() {
+            console.log("LOG: onWindowResize() called. New dimensions:", window.innerWidth, "x", window.innerHeight);
+            if (camera && renderer) { 
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                console.log("LOG: onWindowResize - Camera and renderer updated.");
+            } else {
+                console.warn("LOG: onWindowResize - Camera or renderer not initialized yet.");
+            }
+        }
+
+        // --- Start Application ---
+        window.onload = () => {
+            console.log("Diag: window.onload event fired. Starting application's init().");
+            init();
+        };
+
+    </script>
+</body>
+</html>

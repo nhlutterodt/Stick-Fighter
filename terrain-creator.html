@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paint Terrain</title>
+  <style>
+    /* Remove default margins and hide scrollbars */
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+    /* Optional toolbar style overlay */
+    #toolbar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 4px;
+    }
+  </style>
+  <!-- Include Three.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="toolbar">
+    <p><strong>Paint Terrain:</strong> Click and drag on the terrain.</p>
+  </div>
+  <script>
+    // --- Scene Setup ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75, 
+      window.innerWidth/window.innerHeight, 
+      0.1, 
+      1000
+    );
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- Create a Canvas Texture for the Terrain ---
+    const canvasTex = document.createElement('canvas');
+    canvasTex.width = 512;
+    canvasTex.height = 512;
+    const ctx = canvasTex.getContext('2d');
+    // Fill the canvas with a base color (gray)
+    ctx.fillStyle = '#777777';
+    ctx.fillRect(0, 0, canvasTex.width, canvasTex.height);
+    const texture = new THREE.CanvasTexture(canvasTex);
+
+    // --- Build Terrain Geometry & Material ---
+    // A plane large enough for our painting experience—with many segments for smooth mapping.
+    const terrainGeometry = new THREE.PlaneGeometry(20, 20, 256, 256);
+    const terrainMaterial = new THREE.MeshPhongMaterial({
+      map: texture,
+      side: THREE.DoubleSide
+    });
+    const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+    // Rotate so the plane is horizontal
+    terrain.rotation.x = -Math.PI / 2;
+    scene.add(terrain);
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0x999999);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 20, 10);
+    scene.add(directionalLight);
+
+    // --- Camera Position ---
+    camera.position.set(0, 15, 25);
+    camera.lookAt(0, 0, 0);
+
+    // --- Set Up Raycaster for Interaction ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isPainting = false;
+    const brushColor = "#ff0000";
+    const brushSize = 10; // Brush radius in canvas pixels
+
+    // --- Painting Functions ---
+    function paint(event) {
+      // Convert mouse coordinates to normalized device coordinates (NDC)
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+      
+      // Update the raycaster with the camera and mouse position
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(terrain);
+      
+      if (intersects.length > 0 && intersects[0].uv) {
+        const uv = intersects[0].uv;
+        // Convert UV coordinates (range [0,1]) to canvas coordinates
+        const x = uv.x * canvasTex.width;
+        const y = (1 - uv.y) * canvasTex.height; // Invert Y for canvas coordinates
+        
+        // Draw a circle at the calculated position
+        ctx.beginPath();
+        ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+        ctx.fillStyle = brushColor;
+        ctx.fill();
+        
+        // Inform Three.js that the texture needs updating
+        texture.needsUpdate = true;
+      }
+    }
+
+    // --- Event Listeners for Painting ---
+    renderer.domElement.addEventListener('pointerdown', (event) => {
+      isPainting = true;
+      paint(event);
+    });
+    renderer.domElement.addEventListener('pointermove', (event) => {
+      if (isPainting) paint(event);
+    });
+    renderer.domElement.addEventListener('pointerup', () => { isPainting = false; });
+    renderer.domElement.addEventListener('pointerleave', () => { isPainting = false; });
+
+    // --- Animation Loop ---
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- Handle Window Resize ---
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
