@@ -428,4 +428,23 @@ if (Stickman?.prototype) {
 //   drawAllPowerUps(ctx);
 // And for each stickman: stickman.checkPowerUpCollision();
 
-// --- End integration ---
+export function updateAllPowerUps(delta, context) {
+  // Update each power-up (pass canvas height if available)
+  // Determine canvas height from context or DOM
+  let canvasHeight;
+  if (context && context.canvasHeight !== undefined) {
+    canvasHeight = context.canvasHeight;
+  } else if (typeof document !== 'undefined') {
+    const canvas = document.getElementById('gameCanvas');
+    canvasHeight = canvas ? canvas.height : undefined;
+  } else {
+    canvasHeight = undefined;
+  }
+  for (const pu of powerUps) {
+    pu.update(delta, canvasHeight);
+  }
+  // Cleanup expired/inactive power-ups
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    if (!powerUps[i].active) powerUps.splice(i, 1);
+  }
+}

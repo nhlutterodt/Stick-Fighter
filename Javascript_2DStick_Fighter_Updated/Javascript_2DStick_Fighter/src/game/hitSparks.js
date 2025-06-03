@@ -496,3 +496,17 @@ if (eventManager?.subscribe) {
   });
 }
 // --- End integration ---
+
+export function updateAllHitSparks(delta, context) {
+  for (const hs of hitSparks) {
+    hs.update(delta, context);
+  }
+  // Remove inactive hit sparks after update
+  for (let i = hitSparks.length - 1; i >= 0; i--) {
+    if (!hitSparks[i].active) hitSparks.splice(i, 1);
+  }
+}
+
+export function describeAllHitSparks() {
+  return hitSparks.map(hs => hs.describe());
+}

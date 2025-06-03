@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stick Fighter Modular UI (Modern)</title>
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <div id="healthBars" class="health-bar-container w-full max-w-3xl px-2" style="display: none;"></div>
+  <div id="gameContainer" class="mt-2">
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="messageDisplay"></div>
+    <div id="pauseMenuTitle" class="menu-overlay-text" style="display:none;">Paused</div>
+    <div id="settingsMenuTitle" class="menu-overlay-text" style="display:none;">Settings</div>
+  </div>
+  <button id="resetButton" class="mt-4">Main Menu</button>
+  <div class="controls-info w-full max-w-xl mt-4 p-4 bg-gray-200 rounded-lg shadow"></div>
+  <script type="module" src="./index.js"></script>
+  <script>
+    // --- Advanced Integration: Global Event Bus and UI Sync ---
+    (function() {
+      // Expose eventManager globally for UI and debugging
+      import('./game/eventManager.js').then(mod => {
+        window.eventManager = mod.eventManager;
+        if (window.stickFighterDebug) window.stickFighterDebug.eventManager = mod.eventManager;
+      });
+      // Expose gameContext globally for analytics/debug
+      import('./game/gameContext.js').then(mod => {
+        window.gameContext = mod.default || mod.gameContext;
+        if (window.stickFighterDebug) window.stickFighterDebug.gameContext = window.gameContext;
+      });
+      // Expose stickman, controls, ai, obstacles, powerups for runtime inspection
+      import('./game/stickman.js').then(mod => { window.stickman = mod; });
+      import('./game/controls.js').then(mod => { window.controls = mod; });
+      import('./game/ai.js').then(mod => { window.ai = mod; });
+      import('./game/obstacles.js').then(mod => { window.obstacles = mod; });
+      import('./game/powerups.js').then(mod => { window.powerups = mod; });
+      // Expose menu for runtime UI control
+      import('./ui/menu.js').then(mod => { window.menu = mod; });
+      // Advanced: Listen for key game events and update UI overlays
+      window.addEventListener('stickFighterAppReady', () => {
+        if (window.eventManager) {
+          window.eventManager.subscribe('pause', () => {
+            if (window.menuUI && window.menuUI.updateMenuState) window.menuUI.updateMenuState('PAUSED');
+          });
+          window.eventManager.subscribe('resume', () => {
+            if (window.menuUI && window.menuUI.hideMenu) window.menuUI.hideMenu();
+          });
+          window.eventManager.subscribe('gameOver', () => {
+            if (window.menuUI && window.menuUI.updateMenuState) window.menuUI.updateMenuState('END');
+          });
+          window.eventManager.subscribe('showMenu', ({ state }) => {
+            if (window.menuUI && window.menuUI.updateMenuState) window.menuUI.updateMenuState(state);
+          });
+        }
+      });
+      // Advanced: Sync CSS theme or dynamic classes if needed
+      // (Example: toggle dark mode, update theme from gameContext, etc.)
+      // window.gameContext?.onThemeChange?.((theme) => {
+      //   document.body.className = theme;
+      // });
+    })();
+    // Debug: Show a message if the app is ready
+    window.addEventListener('stickFighterAppReady', () => {
+      if (window.messageDisplayUI && window.messageDisplayUI.showMessage) {
+        window.messageDisplayUI.showMessage('Stick Fighter UI Ready!', { duration: 1200 });
+      }
+    });
+    // Debug: Show a message if a global error occurs
+    window.addEventListener('error', (e) => {
+      if (window.messageDisplayUI && window.messageDisplayUI.showMessage) {
+        window.messageDisplayUI.showMessage('A global error occurred. See console for details.', { critical: true, duration: 0 });
+      }
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      if (window.messageDisplayUI && window.messageDisplayUI.showMessage) {
+        window.messageDisplayUI.showMessage('A promise error occurred. See console for details.', { critical: true, duration: 0 });
+      }
+    });
+    // --- Advanced: Integrate controls, obstacles, and menu for dynamic UI/gameplay ---
+    import('./game/controls.js').then(controlsMod => {
+      if (window.menuUI && window.menuUI.onMenuEvent) {
+        // Example: When menu state changes, update controls or obstacles as needed
+        window.menuUI.onMenuEvent('showMenu', ({ state }) => {
+          if (state === 'SETTINGS_MENU' && controlsMod.enableRemapUI) {
+            controlsMod.enableRemapUI(); // Hypothetical: show remap UI
+          }
+          if (state === 'MENU' && controlsMod.resetToDefaults) {
+            controlsMod.resetToDefaults();
+          }
+        });
+      }
+      // Example: Listen for control changes and update obstacles if needed
+      if (controlsMod.onControlsChanged && window.obstacles) {
+        controlsMod.onControlsChanged(newBindings => {
+          if (window.obstacles.updateForControls) {
+            window.obstacles.updateForControls(newBindings);
+          }
+        });
+      }
+    });
+    import('./game/obstacles.js').then(obstaclesMod => {
+      // Example: When menu triggers a new game, reset obstacles
+      if (window.menuUI && window.menuUI.onMenuEvent) {
+        window.menuUI.onMenuEvent('menuStart', () => {
+          if (obstaclesMod.resetObstacles) obstaclesMod.resetObstacles();
+        });
+      }
+      // Expose obstacles for runtime inspection
+      window.obstacles = obstaclesMod;
+    });
+    // Example: When menu triggers a mode select, update controls/obstacles
+    if (window.menuUI && window.menuUI.onMenuEvent) {
+      window.menuUI.onMenuEvent('menuModeSelect', () => {
+        if (window.controls && window.controls.setMode) window.controls.setMode('modeSelect');
+        if (window.obstacles && window.obstacles.prepareForMode) window.obstacles.prepareForMode('modeSelect');
+      });
+    }
+  </script>
+</body>
+</html>

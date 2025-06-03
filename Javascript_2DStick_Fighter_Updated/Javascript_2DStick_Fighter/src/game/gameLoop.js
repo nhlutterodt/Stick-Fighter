@@ -43,3 +43,60 @@ if (eventManager && typeof eventManager.subscribe === 'function') {
     }
   });
 }
+
+// --- Advanced Integration Opportunities ---
+// 1. UI and Game State Synchronization
+import { updateHealthBar } from '../ui/healthBar.js';
+import { showMessage } from '../ui/messageDisplay.js';
+import { updateMenuState } from '../ui/menu.js';
+
+// Listen for game events and update UI modules accordingly
+if (eventManager && typeof eventManager.subscribe === 'function') {
+  // Health bar updates
+  eventManager.subscribe('playerHit', ({ defender }) => {
+    updateHealthBar(defender);
+  });
+  eventManager.subscribe('playerHealed', ({ player }) => {
+    updateHealthBar(player);
+  });
+  // Show messages for key events
+  eventManager.subscribe('powerupCollected', ({ player, powerup }) => {
+    showMessage(`${player.name || 'Player'} collected a ${powerup.type} powerup!`);
+  });
+  eventManager.subscribe('playerDefeated', ({ winner, loser }) => {
+    showMessage(`${winner} defeated ${loser}!`);
+    updateMenuState('end');
+  });
+  // Menu state for pause/resume
+  eventManager.subscribe('pause', () => updateMenuState('pause'));
+  eventManager.subscribe('resume', () => updateMenuState('resume'));
+}
+
+// 2. Dynamic Difficulty and Adaptive AI
+import * as aiModule from './ai.js';
+// Example: Adjust AI difficulty based on analytics
+if (eventManager && typeof eventManager.subscribe === 'function') {
+  eventManager.subscribe('comboAchieved', ({ player, comboCount }) => {
+    if (comboCount > 3) {
+      for (const ai of aiModule.aiControllers) {
+        ai.setBehavior('aggressive');
+      }
+    }
+  });
+  eventManager.subscribe('playerStreak', ({ player, streak }) => {
+    if (streak > 2) {
+      for (const ai of aiModule.aiControllers) {
+        ai.setBehavior('defensive');
+      }
+    }
+  });
+}
+
+// 3. Centralized Settings Propagation
+import { applySettings } from '../ui/controlsInfo.js';
+if (eventManager && typeof eventManager.subscribe === 'function') {
+  eventManager.subscribe('settingsChanged', ({ settings }) => {
+    applySettings(settings);
+    // Propagate to other systems as needed
+  });
+}

@@ -1,8 +1,21 @@
 // Stickman class for 2D Stick Fighter (feature-rich, ES module)
 // Dependencies: Import or provide ctx, constants, eventManager, updateHealthBars, checkRectCollision, HitSpark, etc. in your main entry point or as needed.
 
-import * as controls from '../game/controls.js';
 import { obstacles, checkObstacleCollision } from './obstacles.js';
+
+// --- Stickman Registry for Modular Access ---
+const stickmanRegistry = [];
+
+export function registerStickman(instance) {
+  if (!stickmanRegistry.includes(instance)) stickmanRegistry.push(instance);
+}
+export function unregisterStickman(instance) {
+  const idx = stickmanRegistry.indexOf(instance);
+  if (idx !== -1) stickmanRegistry.splice(idx, 1);
+}
+export function getAllStickmen() {
+  return [...stickmanRegistry];
+}
 
 export class Stickman {
     constructor(x, y, colors, isPlayer1, controls = null, isNPC = false, aiType = null) {
@@ -79,6 +92,8 @@ export class Stickman {
         this.activeProceduralAnimation = null;
         this.currentAngles = this.defaultAngles();
         this.targetAngles = this.defaultAngles();
+
+        registerStickman(this);
     }
 
     defaultAngles() {

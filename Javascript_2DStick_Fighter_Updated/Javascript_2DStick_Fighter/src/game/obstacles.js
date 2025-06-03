@@ -207,6 +207,19 @@ export function addObstacle(obstacle) {
   }
 }
 
+// --- Obstacle Destroyed Event System ---
+const obstacleDestroyedListeners = [];
+
+/**
+ * Register a callback to be invoked when an obstacle is destroyed.
+ * @param {function} listener - Function to call with the destroyed obstacle as argument
+ */
+export function onObstacleDestroyed(listener) {
+  if (typeof listener === 'function') {
+    obstacleDestroyedListeners.push(listener);
+  }
+}
+
 /**
  * Removes an obstacle by id.
  * @param {string} id
@@ -219,15 +232,18 @@ export function removeObstacleById(id) {
       if (idx !== -1) {
         const [removed] = obstacles.splice(idx, 1);
         eventManager.dispatchEvent('obstacleRemoved', { obstacle: removed });
+        // Notify listeners
+        for (const cb of obstacleDestroyedListeners) {
+          try { cb(removed); } catch (e) { console.warn('[obstacles] ObstacleDestroyed listener error:', e); }
+        }
         return removed;
       }
       return null;
     } catch (err) {
       attempts++;
-      if (attempts > 2) break;
-      // Optionally log or dispatch error
       eventManager?.dispatchEvent('obstacleError', { method: 'removeObstacleById', error: err });
       console.error(`[Obstacle] Error in removeObstacleById: ${err.message}`, err);
+      if (attempts > 2) break;
     }
   }
   return null;
@@ -398,7 +414,9 @@ eventManager?.subscribe?.('obstacleError', ({ obstacle, method, error }) => {
 //   new Obstacle(480, 340, 120, 60)
 // ]);
 
-// --- Export for use in other modules if needed ---
-export {
-  obstacles, Obstacle, addObstacle, removeObstacleById, clearObstacles, getObstacleAtPoint, getObstaclesInRect, getObstacleById, setObstacles, setObstaclesDebug, serializeObstacles, loadObstaclesFromArray, checkObstacleCollision, drawAllObstacles, describeAllObstacles
-};
+// --- After existing integration and subscriptions ---
+export function updateAllObstacles(delta, context) {
+  // Currently static obstacles; placeholder for moving or dynamic obstacles
+  // Future: iterate dynamic obstacles, apply movements or state changes
+  return; 
+}

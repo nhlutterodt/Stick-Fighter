@@ -11,33 +11,58 @@ let debugMode = false;
 let keyMap = {};
 
 // Default key bindings for two players
-const defaultBindings = {
-    player1: {
+/**
+ * @readonly
+ * @type {Readonly<{player1: Object, player2: Object}>}
+ */
+const defaultBindings = Object.freeze({
+    player1: Object.freeze({
         left: 'KeyA', right: 'KeyD', jump: 'KeyW', punch: 'KeyF', kick: 'KeyG', guard: 'ShiftLeft',
         slam: 'KeyS', airDodge: 'KeyC', parry: 'KeyV', run: 'KeyQ', turn: 'KeyR'
-    },
-    player2: {
+    }),
+    player2: Object.freeze({
         left: 'ArrowLeft', right: 'ArrowRight', jump: 'ArrowUp', punch: 'KeyK', kick: 'KeyL', guard: 'ShiftRight',
         slam: 'ArrowDown', airDodge: 'KeyM', parry: 'KeyN', run: 'KeyU', turn: 'KeyP'
-    }
-};
+    })
+});
 
+/**
+ * Set custom key bindings, merged with defaults.
+ * @param {Object} bindings
+ */
 function setKeyBindings(bindings) {
-    keyMap = { ...defaultBindings, ...bindings };
+    keyMap = { player1: { ...defaultBindings.player1, ...(bindings?.player1 || {}) }, player2: { ...defaultBindings.player2, ...(bindings?.player2 || {}) } };
 }
 
+/**
+ * Get a copy of the current key bindings.
+ * @returns {Object}
+ */
 function getKeyBindings() {
-    return { ...keyMap };
+    return { player1: { ...keyMap.player1 }, player2: { ...keyMap.player2 } };
 }
 
+/**
+ * Check if a key is currently pressed.
+ * @param {string} code
+ * @returns {boolean}
+ */
 function isKeyPressed(code) {
     return !!keyState[code];
 }
 
+/**
+ * Subscribe to input events.
+ * @param {Function} callback
+ */
 function subscribeInput(callback) {
     if (typeof callback === 'function') listeners.push(callback);
 }
 
+/**
+ * Unsubscribe from input events.
+ * @param {Function} callback
+ */
 function unsubscribeInput(callback) {
     const idx = listeners.indexOf(callback);
     if (idx !== -1) listeners.splice(idx, 1);
@@ -106,9 +131,24 @@ function remapKey(player, action, newKey) {
 
 function getPressedActions(player) {
     const bindings = keyMap[player] || {};
-    return Object.entries(bindings)
-        .filter(([action, code]) => keyState[code])
-        .map(([action]) => action);
+    // Use Array.prototype.reduce for performance
+    return Object.entries(bindings).reduce((acc, [action, code]) => {
+        if (keyState[code]) acc.push(action);
+        return acc;
+    }, []);
+}
+
+// --- Utility: Get action for a given key code (reverse lookup) ---
+function getActionForKey(player, code) {
+    const bindings = keyMap[player] || {};
+    // Use Object.entries for clarity and performance
+    for (const [action, key] of Object.entries(bindings)) {
+        if (key === code) return action;
+    }
+    return null;
+}
+function getKeyForAction(player, action) {
+    return (keyMap[player] && keyMap[player][action]) || null;
 }
 
 // --- Advanced Utility & Features ---
@@ -189,8 +229,8 @@ function _checkComboTimeout(now) {
 }
 
 function _registerComboInput(code, isDown, timestamp) {
-    if (!isDown) return; // Only consider keydown for combos
-    const now = timestamp || Date.now();
+    if (!isDown) return;
+    const now = timestamp ?? Date.now();
     _checkComboTimeout(now);
     if (!comboState.active) comboState.active = true;
     comboState.sequence.push({ code, isDown, timestamp: now });
@@ -206,36 +246,81 @@ function _registerComboInput(code, isDown, timestamp) {
             try { comboState.onCombo([...comboState.sequence]); } catch (e) { if (debugMode) console.warn('Combo callback error', e); }
         }
         emitDebugEvent('combo', { sequence: [...comboState.sequence] });
+        fireComboPerformed('player1', [...comboState.sequence]);
         clearCombo();
     }
 }
 
+// --- Combo Performed Event System ---
+const comboPerformedListeners = [];
+
+/**
+ * Register a callback to be invoked when a combo is performed.
+ * @param {function} listener - Function to call with combo details: ({ player, comboSequence, timestamp })
+ */
+export function onComboPerformed(listener) {
+  if (typeof listener === 'function') {
+    comboPerformedListeners.push(listener);
+  }
+}
+
+// Internal: Call this when a combo is detected in your combo system
+function fireComboPerformed(player, comboSequence) {
+  const detail = { player, comboSequence, timestamp: Date.now() };
+  for (const cb of comboPerformedListeners) {
+    try { cb(detail); } catch (e) { if (typeof window !== 'undefined' && window.DEBUG_MODE) console.warn('[controls] ComboPerformed listener error:', e); }
+  }
+  // Optionally, dispatch to eventManager for global eventing
+  if (typeof eventManager?.dispatchEvent === 'function') {
+    eventManager.dispatchEvent('comboPerformed', detail);
+  }
+}
+
 // Enhanced error handling in input event
+function shouldDebounceInput(e, isDown) {
+    if (settings.suppressRepeat && isDown && e.repeat) return true;
+    if (settings.inputDebounceMs > 0) {
+        const now = Date.now();
+        if (lastInputTimestamps[e.code] && now - lastInputTimestamps[e.code] < settings.inputDebounceMs) return true;
+        lastInputTimestamps[e.code] = now;
+    }
+    return false;
+}
+
+function processDebugHooks(e, isDown) {
+    emitDebugEvent('input', { code: e.code, isDown, event: e });
+    if (debugMode) console.log(`[Controls] ${isDown ? 'Down' : 'Up'}: ${e.code}`);
+}
+
+function processInputHistory(e, isDown) {
+    if (inputRecording) {
+        inputHistory.push({ code: e.code, isDown, timestamp: Date.now() });
+        if (inputHistory.length > inputHistoryLimit) inputHistory.shift();
+        if (typeof debugHooks.onRecording === 'function') {
+            try { debugHooks.onRecording('record', { code: e.code, isDown }); } catch (e) { if (debugMode) console.warn('Recording debug hook error', e); }
+        }
+    }
+}
+
+function processComboSystem(e, isDown) {
+    _registerComboInput(e.code, isDown, Date.now());
+}
+
+function notifyListeners(e, isDown) {
+    listeners.forEach(cb => {
+        try { cb(e.code, isDown, e); } catch (err) { onInputError(err, { code: e.code, isDown, event: e }); }
+    });
+}
+
 function handleKeyEvent(e, isDown) {
     try {
-        if (settings.suppressRepeat && isDown && e.repeat) return;
-        if (settings.inputDebounceMs > 0) {
-            const now = Date.now();
-            if (lastInputTimestamps[e.code] && now - lastInputTimestamps[e.code] < settings.inputDebounceMs) return;
-            lastInputTimestamps[e.code] = now;
-        }
+        if (shouldDebounceInput(e, isDown)) return;
         keyState[e.code] = isDown;
         eventManager.dispatchEvent('input', { code: e.code, isDown, event: e });
-        emitDebugEvent('input', { code: e.code, isDown, event: e });
-        if (debugMode) console.log(`[Controls] ${isDown ? 'Down' : 'Up'}: ${e.code}`);
-        listeners.forEach(cb => {
-            try { cb(e.code, isDown, e); } catch (err) { onInputError(err, { code: e.code, isDown, event: e }); }
-        });
-        // --- Input history/recording ---
-        if (inputRecording) {
-            inputHistory.push({ code: e.code, isDown, timestamp: Date.now() });
-            if (inputHistory.length > inputHistoryLimit) inputHistory.shift();
-            if (typeof debugHooks.onRecording === 'function') {
-                try { debugHooks.onRecording('record', { code: e.code, isDown }); } catch (e) { if (debugMode) console.warn('Recording debug hook error', e); }
-            }
-        }
-        // --- Combo system ---
-        _registerComboInput(e.code, isDown, Date.now());
+        processDebugHooks(e, isDown);
+        notifyListeners(e, isDown);
+        processInputHistory(e, isDown);
+        processComboSystem(e, isDown);
     } catch (err) {
         onInputError(err, { code: e.code, isDown, event: e });
     }
@@ -290,6 +375,22 @@ if (typeof window !== 'undefined' && !window._stickfighterControlsAttached) {
     window._stickfighterControlsAttached = true;
 }
 
+// --- Integration: Listen for menu reset events to reset controls ---
+if (eventManager && typeof eventManager.subscribe === 'function') {
+    eventManager.subscribe('menuMainMenu', () => {
+        resetKeyBindings();
+    });
+    eventManager.subscribe('resetKeyBindings', () => {
+        resetKeyBindings();
+    });
+}
+
+function resetKeyBindings() {
+    keyMap = { player1: { ...defaultBindings.player1 }, player2: { ...defaultBindings.player2 } };
+    eventManager.dispatchEvent('keyBindingsChanged', { bindings: getKeyBindings() });
+}
+
+// Add JSDoc to all exports for better integration
 export {
     setKeyBindings,
     getKeyBindings,
@@ -300,7 +401,6 @@ export {
     disableDebug,
     keyState,
     defaultBindings,
-    // --- New/Extended API ---
     setControlsSettings,
     getControlsSettings,
     remapKey,
@@ -308,7 +408,6 @@ export {
     getKeyForAction,
     resetKeyBindings,
     getPressedActions,
-    // --- Advanced Utility & Features ---
     startInputRecording,
     stopInputRecording,
     getInputHistory,
@@ -319,11 +418,9 @@ export {
     isInputPlayback,
     tickInputPlayback,
     clearInputState,
-    // --- Enhanced Event Management, Debugging, and Error Handling ---
     setInputErrorHandler,
     setDebugHooks,
     emitDebugEvent,
-    // --- Combo API ---
     setComboSettings,
     getComboSettings,
     setComboCallback,
