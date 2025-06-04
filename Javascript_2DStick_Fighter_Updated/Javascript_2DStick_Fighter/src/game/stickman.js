@@ -2,6 +2,18 @@
 // Dependencies: Import or provide ctx, constants, eventManager, updateHealthBars, checkRectCollision, HitSpark, etc. in your main entry point or as needed.
 
 import { obstacles, checkObstacleCollision } from './obstacles.js';
+import {
+  STICKMAN_WIDTH,
+  STICKMAN_HEIGHT,
+  STICKMAN_MASS,
+  STICKMAN_LIMB_LENGTH,
+  LIMB_HITBOX_PADDING,
+  PLAYER_HEALTH_MAX,
+  LIMB_IMPAIR_DURATION,
+  ATTACK_DURATION,
+  SPECIAL_ATTACK_DURATION,
+  GRAVITY
+} from './constants.js';
 
 // --- Stickman Registry for Modular Access ---
 const stickmanRegistry = [];
@@ -15,6 +27,18 @@ export function unregisterStickman(instance) {
 }
 export function getAllStickmen() {
   return [...stickmanRegistry];
+}
+// Update all stickman instances each frame, providing opponent, rendering context, and game state
+export function updateAllStickmen(delta, context) {
+  const stickmen = getAllStickmen();
+  stickmen.forEach((sm, idx) => {
+    const opponent = stickmen[(idx + 1) % stickmen.length] || null;
+    try {
+      sm.update(opponent, context.ctx, context);
+    } catch (e) {
+      console.error('[updateAllStickmen] Error updating stickman:', e);
+    }
+  });
 }
 
 export class Stickman {
@@ -106,9 +130,22 @@ export class Stickman {
     }
 
     getJointPositions() {
-        // Implement joint position calculation based on angles, x, y, and limbSegmentLength
-        // ...existing code or placeholder...
-        return {};
+        const { x, y, width, height, limbSegmentLength } = this;
+        // Basic skeleton: hip, neck, head, shoulders, elbows, hands, knees, feet
+        const hip = { x, y };
+        const neck = { x, y: y - height * 0.4 };
+        const head = { cx: x, cy: y - height * 0.6, radius: width * 0.5 };
+        const leftShoulder = { x: neck.x - limbSegmentLength, y: neck.y };
+        const rightShoulder = { x: neck.x + limbSegmentLength, y: neck.y };
+        const leftElbow = { x: leftShoulder.x - limbSegmentLength, y: leftShoulder.y + limbSegmentLength };
+        const rightElbow = { x: rightShoulder.x + limbSegmentLength, y: rightShoulder.y + limbSegmentLength };
+        const leftHand = { x: leftElbow.x - limbSegmentLength, y: leftElbow.y };
+        const rightHand = { x: rightElbow.x + limbSegmentLength, y: rightElbow.y };
+        const leftKnee = { x: hip.x - limbSegmentLength / 2, y: hip.y + limbSegmentLength };
+        const rightKnee = { x: hip.x + limbSegmentLength / 2, y: hip.y + limbSegmentLength };
+        const leftFoot = { x: leftKnee.x, y: leftKnee.y + limbSegmentLength };
+        const rightFoot = { x: rightKnee.x, y: rightKnee.y + limbSegmentLength };
+        return { hip, neck, head, leftShoulder, rightShoulder, leftElbow, rightElbow, leftHand, rightHand, leftKnee, rightKnee, leftFoot, rightFoot };
     }
 
     getLimbColor(limb) {
@@ -157,11 +194,12 @@ export class Stickman {
     }
 
     draw(ctx) {
+        const joints = this.getJointPositions();
+        if (!joints || !joints.neck) return; // nothing to draw yet
         ctx.save();
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.lineWidth = this.lineWidth;
-        const joints = this.getJointPositions();
         // Draw torso
         ctx.strokeStyle = this.getLimbColor('torso');
         ctx.beginPath();
@@ -249,7 +287,23 @@ export class Stickman {
 
     // --- Game Logic ---
     update(opponent, ctx, gameState) {
-        // ...implement update logic, including movement, AI, health, attacks, etc...
+      const { delta, canvasHeight } = gameState;
+      // Apply gravity
+      this.velocityY += GRAVITY * delta;
+      // Update position
+      this.y += this.velocityY;
+      this.x += this.velocityX;
+      // Ground collision
+      const groundY = canvasHeight - this.height / 2;
+      if (this.y >= groundY) {
+        this.y = groundY;
+        this.velocityY = 0;
+        this.isJumping = false;
+      }
+      // Face opponent automatically
+      if (opponent && this.canChangeFacing()) {
+        this.facingRight = opponent.x > this.x;
+      }
     }
     canAct() {
         return this.hitStunTimer <= 0 && this.parryFailedVulnTimer <= 0 && !this.isDodging && !this.isParrying && !this.isAttacking && !this.isPerformingSpecialMove && !this.activeProceduralAnimation;

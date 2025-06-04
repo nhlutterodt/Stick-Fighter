@@ -181,6 +181,15 @@ function setWinnerLoserEffect(winnerIdx, loserIdx) {
   });
 }
 
+// Clear any winner/loser CSS effects from health bars
+function clearWinnerLoserEffect() {
+  HEALTH_BAR_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('winner', 'loser');
+  });
+}
+
 // --- Round Timer Bar ---
 function updateRoundTimerBar(percent) {
   let timerBar = document.getElementById('roundTimerBar');
@@ -320,7 +329,8 @@ window.healthBarDebug = {
   onHealthBarEvent,
   offHealthBarEvent,
   dispatchHealthBarEvent,
-  healthBarEventListeners
+  healthBarEventListeners,
+  clearWinnerLoserEffect // Expose clear stub for healthBar debugging
 };
 
 // Event-driven updates
@@ -361,7 +371,8 @@ window.healthBarUI = {
   visuallyShow,
   onHealthBarEvent,
   offHealthBarEvent,
-  dispatchHealthBarEvent
+  dispatchHealthBarEvent,
+  clearWinnerLoserEffect // Expose clear stub for healthBar UI integration
 };
 
 // Export core health bar API for external modules

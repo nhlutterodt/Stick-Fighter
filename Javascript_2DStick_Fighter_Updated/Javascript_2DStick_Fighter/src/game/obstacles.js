@@ -404,6 +404,18 @@ eventManager?.subscribe?.('obstacleError', ({ obstacle, method, error }) => {
 // In your main game loop or render function:
 // drawAllObstacles(ctx);
 
+/**
+ * Update or draw all obstacles; called in the game loop.
+ * @param {number} delta
+ * @param {{ctx: CanvasRenderingContext2D}} context
+ */
+export function updateAllObstacles(delta, context) {
+  const ctx = context?.ctx || (typeof document !== 'undefined' ? document.getElementById('gameCanvas')?.getContext('2d') : null);
+  if (!ctx) return;
+  // Draw static obstacles
+  drawAllObstacles(ctx);
+}
+
 // --- Integration with controls and gameplay logic ---
 // Example: Use checkObstacleCollision in player movement/collision logic
 // if (checkObstacleCollision(playerRect)) { ... }
@@ -413,10 +425,3 @@ eventManager?.subscribe?.('obstacleError', ({ obstacle, method, error }) => {
 //   new Obstacle(200, 350, 120, 40),
 //   new Obstacle(480, 340, 120, 60)
 // ]);
-
-// --- After existing integration and subscriptions ---
-export function updateAllObstacles(delta, context) {
-  // Currently static obstacles; placeholder for moving or dynamic obstacles
-  // Future: iterate dynamic obstacles, apply movements or state changes
-  return; 
-}

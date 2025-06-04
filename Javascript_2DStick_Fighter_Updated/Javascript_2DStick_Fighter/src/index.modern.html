@@ -15,51 +15,54 @@
     <div id="settingsMenuTitle" class="menu-overlay-text" style="display:none;">Settings</div>
   </div>
   <button id="resetButton" class="mt-4">Main Menu</button>
+  <!-- Add Start Game button and wire to trigger the game loop -->
+  <button id="startGameBtn" class="mt-2">Start Game</button>
   <div class="controls-info w-full max-w-xl mt-4 p-4 bg-gray-200 rounded-lg shadow"></div>
   <script type="module" src="./index.js"></script>
   <script>
     // --- Advanced Integration: Global Event Bus and UI Sync ---
-    (function() {
-      // Expose eventManager globally for UI and debugging
-      import('./game/eventManager.js').then(mod => {
-        window.eventManager = mod.eventManager;
-        if (window.stickFighterDebug) window.stickFighterDebug.eventManager = mod.eventManager;
+    (async function() {
+      // Load and expose eventManager & gameContext first
+      const [{ eventManager }, gc] = await Promise.all([
+        import('./game/eventManager.js'),
+        import('./game/gameContext.js')
+      ]);
+      window.eventManager = eventManager;
+      window.gameContext = gc.default || gc.gameContext;
+      // Expose context utilities globally for console debugging
+      window.setMenuState = gc.setMenuState;
+      window.registerSystem = gc.registerSystem;
+      window.broadcastGameEvent = gc.broadcastGameEvent;
+      window.logDiagnostic = gc.logDiagnostic;
+      if (window.stickFighterDebug) {
+        window.stickFighterDebug.eventManager = eventManager;
+        window.stickFighterDebug.gameContext = window.gameContext;
+      }
+      // Subscriptions now safe to call
+      eventManager.subscribe('pause', () => {
+        window.menuUI?.updateMenuState('PAUSED');
       });
-      // Expose gameContext globally for analytics/debug
-      import('./game/gameContext.js').then(mod => {
-        window.gameContext = mod.default || mod.gameContext;
-        if (window.stickFighterDebug) window.stickFighterDebug.gameContext = window.gameContext;
+      eventManager.subscribe('resume', () => {
+        window.menuUI?.hideMenu();
       });
-      // Expose stickman, controls, ai, obstacles, powerups for runtime inspection
-      import('./game/stickman.js').then(mod => { window.stickman = mod; });
-      import('./game/controls.js').then(mod => { window.controls = mod; });
-      import('./game/ai.js').then(mod => { window.ai = mod; });
-      import('./game/obstacles.js').then(mod => { window.obstacles = mod; });
-      import('./game/powerups.js').then(mod => { window.powerups = mod; });
-      // Expose menu for runtime UI control
-      import('./ui/menu.js').then(mod => { window.menu = mod; });
-      // Advanced: Listen for key game events and update UI overlays
-      window.addEventListener('stickFighterAppReady', () => {
-        if (window.eventManager) {
-          window.eventManager.subscribe('pause', () => {
-            if (window.menuUI && window.menuUI.updateMenuState) window.menuUI.updateMenuState('PAUSED');
-          });
-          window.eventManager.subscribe('resume', () => {
-            if (window.menuUI && window.menuUI.hideMenu) window.menuUI.hideMenu();
-          });
-          window.eventManager.subscribe('gameOver', () => {
-            if (window.menuUI && window.menuUI.updateMenuState) window.menuUI.updateMenuState('END');
-          });
-          window.eventManager.subscribe('showMenu', ({ state }) => {
-            if (window.menuUI && window.menuUI.updateMenuState) window.menuUI.updateMenuState(state);
-          });
-        }
+      eventManager.subscribe('gameOver', () => {
+        window.menuUI?.updateMenuState('END');
       });
-      // Advanced: Sync CSS theme or dynamic classes if needed
-      // (Example: toggle dark mode, update theme from gameContext, etc.)
-      // window.gameContext?.onThemeChange?.((theme) => {
-      //   document.body.className = theme;
-      // });
+      eventManager.subscribe('showMenu', ({ state }) => {
+        window.menuUI?.updateMenuState(state);
+      });
+      // Expose other modules
+      import('./game/stickman.js').then(m => window.stickman = m);
+      import('./game/controls.js').then(m => window.controls = m);
+      import('./game/ai.js').then(m => window.ai = m);
+      import('./game/obstacles.js').then(m => window.obstacles = m);
+      import('./game/powerups.js').then(m => {
+        window.powerups = m;
+        window.spawnRandomPowerUp = m.spawnRandomPowerUp;
+        window.clearPowerUps = m.clearPowerUps;
+        window.updateAllPowerUps = m.updateAllPowerUps;
+        window.powerUpDiagnostics = m.powerUpDiagnostics;
+      });
     })();
     // Debug: Show a message if the app is ready
     window.addEventListener('stickFighterAppReady', () => {
@@ -117,6 +120,10 @@
         if (window.obstacles && window.obstacles.prepareForMode) window.obstacles.prepareForMode('modeSelect');
       });
     }
+    // Wire our static Start Game button to begin the game loop
+    document.getElementById('startGameBtn')?.addEventListener('click', () => {
+      window.eventManager?.dispatchEvent('menuStart');
+    });
   </script>
 </body>
 </html>

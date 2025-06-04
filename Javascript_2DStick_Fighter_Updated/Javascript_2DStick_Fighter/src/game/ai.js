@@ -64,13 +64,20 @@ export class AIController {
     this.behavior = behavior;
     this.options = { ...options };
     this.state = {};
+    // Initialize AIController runtime properties
     this.debug = options.debug || false;
     this.lastDecision = 0;
     this.decisionInterval = options.decisionInterval || 100; // ms
     this.active = true;
     this.plugins = [];
-    this.eventHooks = Object.create(null); // { eventName: [fn, ...] }
+    this.eventHooks = Object.create(null);
+
+    // Register this AIController instance in shared context
+    gameContext.aiControllers.push(this);
+    addAIController(this);
     eventManager?.dispatchEvent('aiControllerCreated', { ai: this });
+    // Also add to module-level AI list
+    aiControllers.push(this);
   }
 
   /**
@@ -250,6 +257,10 @@ export const aiDiagnostics = {
 // Register AI system in the shared game context for global access and analytics
 registerSystem('aiControllers', gameContext.aiControllers);
 
+// --- Integration: register AI systems in context
+registerSystem('AIController', AIController);
+registerSystem('AI_BEHAVIORS', AI_BEHAVIORS);
+
 // Listen for global game events to allow AI to react to cross-system events
 if (eventManager && typeof eventManager.subscribe === 'function') {
   eventManager.subscribe('powerupCollected', ({ player, powerup }) => {
@@ -296,7 +307,8 @@ export function updateAllAIControllers(delta, context) {
  * Get all active AIControllers
  */
 export function getActiveAIControllers() {
-  return aiControllers.filter(ai => ai.active);
+  // Use shared context array to ensure controllers are tracked
+  return gameContext.aiControllers.filter(ai => ai.active);
 }
 
 /**

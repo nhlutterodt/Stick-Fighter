@@ -11,8 +11,15 @@ export const gameContext = {
   hitSparks: [],
   eventManager,
   diagnostics: {},
+  menuState: null, // Current menu state
   // Add more shared state as needed
 };
+
+// Utility to set and broadcast menu state across all modules
+export function setMenuState(state) {
+  gameContext.menuState = state;
+  eventManager?.dispatchEvent('showMenu', { state });
+}
 
 // Utility to register a system/component in the context
 export function registerSystem(name, ref) {

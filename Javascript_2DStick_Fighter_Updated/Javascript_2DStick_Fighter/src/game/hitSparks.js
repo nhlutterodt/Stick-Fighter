@@ -2,6 +2,9 @@
 // Author: Modularized & enhanced for ES module architecture
 
 import { eventManager } from './eventManager.js';
+import {
+  // no constants needed here, keep imports minimal
+} from './constants.js';
 
 /**
  * HitSparkType registry for extensibility (different visual/sound effects)
@@ -509,4 +512,13 @@ export function updateAllHitSparks(delta, context) {
 
 export function describeAllHitSparks() {
   return hitSparks.map(hs => hs.describe());
+}
+/**
+ * Render all active hit sparks on the canvas
+ * @param {CanvasRenderingContext2D} ctx
+ */
+export function drawAllHitSparks(ctx) {
+  for (const hs of hitSparks) {
+    try { hs.draw(ctx); } catch (e) { console.error('[hitSparks] Error drawing hit spark:', e); }
+  }
 }

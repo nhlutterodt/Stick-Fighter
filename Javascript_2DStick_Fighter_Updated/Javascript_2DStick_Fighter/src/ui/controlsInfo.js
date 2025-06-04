@@ -197,6 +197,10 @@ if (eventManager && typeof eventManager.subscribe === 'function') {
   eventManager.subscribe('keyBindingsChanged', ({ bindings }) => {
     renderControlsInfo();
   });
+  // Show controls info UI when remap is triggered
+  eventManager.subscribe('showControlsRemap', () => {
+    showControlsInfo();
+  });
 }
 
 // --- UI Integration: Expose controlsInfo API for other UI modules ---

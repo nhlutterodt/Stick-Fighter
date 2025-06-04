@@ -390,6 +390,29 @@ function resetKeyBindings() {
     eventManager.dispatchEvent('keyBindingsChanged', { bindings: getKeyBindings() });
 }
 
+// Initialize keyMap with default bindings on module load
+setKeyBindings(defaultBindings);
+
+// Notify external modules of binding changes
+/**
+ * Subscribe to changes in key bindings.
+ * @param {function(Object)} callback - receives updated bindings object
+ */
+export function onControlsChanged(callback) {
+  if (typeof callback === 'function') {
+    eventManager.subscribe('keyBindingsChanged', ({ bindings }) => callback(bindings));
+  }
+}
+
+// Alias for resetting to defaults (used by UI integration)
+export const resetToDefaults = resetKeyBindings;
+
+// Stub for remap UI trigger (used by UI integration)
+export function enableRemapUI() {
+  // Placeholder: show remapping UI via event
+  eventManager.dispatchEvent('showControlsRemap', {});
+}
+
 // Add JSDoc to all exports for better integration
 export {
     setKeyBindings,

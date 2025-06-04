@@ -1,9 +1,10 @@
 import { gameContext, registerSystem, logDiagnostic } from './gameContext.js';
 import { eventManager } from './eventManager.js';
 import { updateAllAIControllers } from './ai.js';
-import { updateAllObstacles } from './obstacles.js';
-import { updateAllPowerUps } from './powerups.js';
-import { updateAllHitSparks } from './hitSparks.js';
+import { updateAllObstacles, drawAllObstacles } from './obstacles.js';
+import { updateAllPowerUps, drawAllPowerUps } from './powerups.js';
+import { updateAllHitSparks, drawAllHitSparks } from './hitSparks.js';
+import { updateAllStickmen, getAllStickmen } from './stickman.js';
 
 // Register core systems in the shared context for cross-module access
 registerSystem('eventManager', eventManager);
@@ -14,15 +15,49 @@ registerSystem('hitSparks', gameContext.hitSparks);
 // Register other systems as needed
 
 // Unified, extensible game loop with event and debug/diagnostic hooks
+let _gameOverTriggered = false;
 export function integratedGameLoop(delta, contextOverrides = {}) {
+  // DEBUG: log each time game loop runs
+  console.debug('[gameLoop] integratedGameLoop called, delta:', delta);
   // Merge context for this frame
   const context = { ...gameContext, ...contextOverrides };
+  // Include delta time for systems that need it
+  context.delta = delta;
+
+  // Reset game over flag when menu is shown (new game)
+  if (context.menuState === 'MENU' || context.menuState === 'END') {
+    _gameOverTriggered = false;
+  }
   // Update all systems
   updateAllAIControllers?.(delta, context);
   updateAllObstacles?.(delta, context);
+  updateAllStickmen?.(delta, context);
   updateAllPowerUps?.(delta, context);
   updateAllHitSparks?.(delta, context);
-  // ...update other systems as needed...
+  // Check for game over
+  if (! _gameOverTriggered && Array.isArray(context.players) && context.players.length >= 2) {
+    const [p1, p2] = context.players;
+    if (p1.health <= 0 || p2.health <= 0) {
+      _gameOverTriggered = true;
+      const winner = p1.health > p2.health ? p1 : p2;
+      const loser  = winner === p1 ? p2 : p1;
+      eventManager.dispatchEvent('playerDefeated', { winner, loser });
+      eventManager.dispatchEvent('gameOver', { winner, loser });
+      // Notify end of fight for UI cleanup
+      eventManager.dispatchEvent('fightEnd', { winner, loser });
+    }
+  }
+  // Render all layers in order: obstacles, stickmen, hitSparks, powerups
+  if (context.ctx) {
+    drawAllObstacles(context.ctx);
+    // Draw all stickman instances
+    getAllStickmen().forEach(stickman => {
+      try { stickman.draw(context.ctx); }
+      catch (e) { console.error('[gameLoop] Error drawing stickman:', e); }
+    });
+    drawAllHitSparks(context.ctx);
+    drawAllPowerUps(context.ctx);
+  }
   // Diagnostics/analytics hook
   logDiagnostic('frame', { time: Date.now(), context });
   // Broadcast frame event for plugins/analytics/debug tools
