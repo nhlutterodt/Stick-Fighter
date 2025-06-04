@@ -13,7 +13,8 @@ import '../src/game/hitSparks.js';
 import '../src/game/obstacles.js';
 import '../src/game/powerups.js';
 import { Stickman } from './game/stickman.js';
-import { setMenuState, gameContext } from './game/gameContext.js';
+import { gameContext } from './game/gameContext.js';
+import { onScreenStateChange, updateScreenOverlays, setScreenState } from './ui/screenManager.js';
 
 // Expose the central event manager globally for UI scripts
 window.eventManager = eventManager;
@@ -22,17 +23,13 @@ window.eventManager = eventManager;
 window.addEventListener('DOMContentLoaded', () => {
   try {
     let paused = false;
-    // Pause/resume handling
-    eventManager.subscribe('pause', () => { paused = true; });
-    eventManager.subscribe('resume', () => { paused = false; });
-    // Initialize menu via central context and event bus
-    setMenuState('MENU');
-    // Setup canvas and game loop starter
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas ? canvas.getContext('2d') : null;
-    let lastTime = 0;
-    // Start the game loop when menuStart is fired
+    setScreenState('MENU');
+    updateScreenOverlays();
+    onScreenStateChange(updateScreenOverlays);
+    eventManager.subscribe('showMenu', ({ state }) => setScreenState(state || 'MENU'));
+    // Step 4: On Start Game button click (menuStart), call setScreenState('PLAYING') before starting the game loop
     eventManager.subscribe('menuStart', () => {
+      setScreenState('PLAYING');
       window.menuUI?.hideMenu();
       gameContext.players.length = 0;
       const canvas = document.getElementById('gameCanvas');
@@ -43,12 +40,12 @@ window.addEventListener('DOMContentLoaded', () => {
       p2.playerIndex = 1;
       gameContext.players.push(p1, p2);
       eventManager.dispatchEvent('fightStart', { players: gameContext.players });
-      lastTime = performance.now();
+      let lastTime = performance.now();
       function frame(time) {
         const delta = time - lastTime;
         lastTime = time;
-        if (ctx) {
-          // Clear and fill background
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.fillStyle = '#111';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -60,14 +57,30 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       requestAnimationFrame(frame);
     });
-    // Keyboard shortcut to toggle pause/resume via Escape key
+    // Step 5: On 'pause', call setScreenState('PAUSED')
+    eventManager.subscribe('pause', () => { paused = true; setScreenState('PAUSED'); });
+    // Step 6: On 'resume', call setScreenState('PLAYING')
+    eventManager.subscribe('resume', () => { paused = false; setScreenState('PLAYING'); });
+    // Step 7: On 'gameOver', call setScreenState('END')
+    eventManager.subscribe('gameOver', () => setScreenState('END'));
+    // Step 8: On 'fightStart', call setScreenState('PLAYING')
+    eventManager.subscribe('fightStart', () => setScreenState('PLAYING'));
+    // Step 9: On 'fightEnd', call setScreenState('END')
+    eventManager.subscribe('fightEnd', () => setScreenState('END'));
+    // Step 10: On 'menuMainMenu', call setScreenState('MENU')
+    eventManager.subscribe('menuMainMenu', () => setScreenState('MENU'));
+    // Step 11: On settings menu open, call setScreenState('SETTINGS_MENU')
+    eventManager.subscribe('settingsMenu', () => setScreenState('SETTINGS_MENU'));
+    // Step 12: ESC key handler toggles PAUSED/PLAYING using setScreenState
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (!paused) {
           eventManager.dispatchEvent('pause');
+          setScreenState('PAUSED');
           window.menuUI?.updateMenuState('PAUSED');
         } else {
           eventManager.dispatchEvent('resume');
+          setScreenState('PLAYING');
           window.menuUI?.hideMenu();
         }
         paused = !paused;
@@ -107,6 +120,8 @@ window.addEventListener('DOMContentLoaded', () => {
         });
       }
     });
+    // Step 3: On 'showMenu', call setScreenState(state) to ensure all menu transitions are routed through the manager
+    eventManager.subscribe('showMenu', ({ state }) => setScreenState(state || 'MENU'));
     // Debug: Log successful boot
     if (window?.DEBUG_MODE) console.debug('[index.js] UI/game bootstrapped successfully');
     // Event: Custom event for app ready

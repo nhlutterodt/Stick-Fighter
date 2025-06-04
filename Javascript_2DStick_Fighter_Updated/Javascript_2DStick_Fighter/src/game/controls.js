@@ -3,6 +3,7 @@
 
 import { eventManager } from './eventManager.js';
 import { obstacles, checkObstacleCollision } from './obstacles.js';
+import { getScreenState } from '../ui/screenManager.js';
 
 // Internal state
 const keyState = {};
@@ -326,6 +327,16 @@ function handleKeyEvent(e, isDown) {
     }
 }
 
+function handleKeyDown(e) {
+  if (getScreenState && getScreenState() !== 'PLAYING') return;
+  handleKeyEvent(e, true);
+}
+
+function handleKeyUp(e) {
+  if (getScreenState && getScreenState() !== 'PLAYING') return;
+  handleKeyEvent(e, false);
+}
+
 // Enhanced input playback tick with debug and error handling
 function tickInputPlayback() {
     if (!inputPlayback || playbackIndex >= playbackData.length) return;
@@ -370,8 +381,8 @@ function clearInputState() {
 
 // Attach global listeners (idempotent)
 if (typeof window !== 'undefined' && !window._stickfighterControlsAttached) {
-    window.addEventListener('keydown', e => handleKeyEvent(e, true));
-    window.addEventListener('keyup', e => handleKeyEvent(e, false));
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     window._stickfighterControlsAttached = true;
 }
 

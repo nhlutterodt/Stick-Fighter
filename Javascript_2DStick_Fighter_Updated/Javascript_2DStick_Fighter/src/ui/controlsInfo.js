@@ -3,6 +3,7 @@
 
 import { getKeyBindings } from '../game/controls.js';
 import { eventManager } from '../game/eventManager.js';
+import { onScreenStateChange } from './screenManager.js';
 
 let container = null;
 let tooltip = null;
@@ -189,6 +190,17 @@ function hideControlsInfo() {
 function applySettings(settings) {
   renderControlsInfo();
 }
+
+// Show/hide controls info based on screen state
+onScreenStateChange(state => {
+  const controlsInfoEl = document.querySelector('.controls-info');
+  if (!controlsInfoEl) return;
+  if (state === 'MENU' || state === 'SETTINGS_MENU') {
+    controlsInfoEl.style.display = 'block';
+  } else {
+    controlsInfoEl.style.display = 'none';
+  }
+});
 
 if (eventManager && typeof eventManager.subscribe === 'function') {
   eventManager.subscribe('settingsChanged', ({ settings }) => {

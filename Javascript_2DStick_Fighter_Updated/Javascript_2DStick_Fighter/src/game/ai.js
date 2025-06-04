@@ -3,6 +3,7 @@
 
 import { gameContext, registerSystem, logDiagnostic } from './gameContext.js';
 import { eventManager } from './eventManager.js';
+import { getScreenState } from '../ui/screenManager.js';
 
 /**
  * AI Behavior Registry for extensibility
@@ -298,6 +299,7 @@ export function removeAIController(ai) {
   }
 }
 export function updateAllAIControllers(delta, context) {
+  if (getScreenState && getScreenState() !== 'PLAYING') return;
   for (const ai of aiControllers) ai.update(delta, context);
 }
 

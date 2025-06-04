@@ -4,6 +4,7 @@
  */
 
 import { eventManager } from './eventManager.js';
+import { getScreenState } from '../ui/screenManager.js';
 
 /**
  * Power-up type registry for dynamic registration and extensibility
@@ -279,6 +280,11 @@ export function updatePowerUps(delta, canvasHeight) {
   for (const pu of powerUps) pu.update(delta, canvasHeight);
 }
 
+export function updateAllPowerUps(delta, context) {
+  if (getScreenState && getScreenState() !== 'PLAYING') return;
+  updatePowerUps(delta, context?.canvasHeight || 400);
+}
+
 export function drawAllPowerUps(ctx) {
   for (const pu of powerUps) pu.draw(ctx);
 }
@@ -337,114 +343,13 @@ export function loadPowerUpsFromData(arr) {
 
 // --- EventManager integration for diagnostics and analytics ---
 eventManager?.subscribe?.('powerupAdded', ({ powerup }) => {
-  if (powerup.debug) console.log('[PowerUp] Added:', powerup.describe());
-});
-eventManager?.subscribe?.('powerupRemoved', ({ powerup }) => {
-  if (powerup?.debug) console.log('[PowerUp] Removed:', powerup?.describe?.());
-});
-eventManager?.subscribe?.('powerupCollected', ({ powerup, player }) => {
-  console.log(`[PowerUp] Collected by player:`, powerup.describe(), player);
-});
-eventManager?.subscribe?.('powerupExpired', ({ powerup }) => {
-  console.log('[PowerUp] Expired:', powerup.describe());
-});
-eventManager?.subscribe?.('powerupError', ({ powerup, error }) => {
-  console.error('[PowerUp] Error:', error, powerup);
-});
-eventManager?.subscribe?.('powerupSpawned', ({ powerup }) => {
-  if (powerup.debug) console.log('[PowerUp] Spawned:', powerup.describe());
-});
-eventManager?.subscribe?.('powerupTypeRegistered', ({ type, config }) => {
-  console.log(`[PowerUp] Type registered: ${type}`, config);
-});
-eventManager?.subscribe?.('powerupTypeUnregistered', ({ type }) => {
-  console.log(`[PowerUp] Type unregistered: ${type}`);
+  if (getScreenState && getScreenState() !== 'PLAYING') return;
+  // ...diagnostic code...
 });
 
-/**
- * Debug/diagnostics API
- */
-export const powerUpDiagnostics = {
-  getAll: () => [...powerUps],
-  getActive: getActivePowerUps,
-  getByType: getPowerUpsByType,
-  getByState: getPowerUpsByState,
-  describeAll: describeAllPowerUps,
-  serializeAll: serializeAllPowerUps,
-  count: () => powerUps.length,
-};
-
-// --- Integration with obstacles, stickman, controls, gameLoop ---
-// Assumes these modules are imported in the main entry point (index.js or gameLoop.js)
-// and that eventManager is the central event bus for all modules.
-
-// Integration: Power-ups can interact with obstacles (e.g., spawn on obstacle destroyed)
-import { onObstacleDestroyed } from './obstacles.js';
-import { Stickman, getAllStickmen } from './stickman.js';
-import { onComboPerformed } from './controls.js';
-
-// Example: Spawn a random powerup when an obstacle is destroyed
-if (typeof onObstacleDestroyed === 'function') {
-  onObstacleDestroyed((obstacle) => {
-    if (Math.random() < 0.5) {
-      // 50% chance to spawn a powerup at obstacle's position
-      spawnRandomPowerUp(obstacle.x, obstacle.y);
-    }
-  });
-}
-
-// Example: Power-up can affect all stickmen (areaHeal, etc.)
-eventManager?.subscribe?.('powerupCollected', ({ powerup, player }) => {
-  if (powerup.type === 'areaHeal') {
-    const allPlayers = typeof getAllStickmen === 'function' ? getAllStickmen() : [player];
-    powerup.effect?.(player, { allPlayers });
+eventManager?.subscribe?.('screenStateChanged', ({ state }) => {
+  if (window?.DEBUG_MODE) {
+    console.debug(`[PowerUps] Screen state changed to: ${state}`);
   }
+  // Optionally: pause/resume powerup timers, analytics, etc.
 });
-
-// Example: Controls integration (combo triggers special powerup spawn)
-if (typeof onComboPerformed === 'function') {
-  onComboPerformed((combo, player) => {
-    if (combo === 'ULTRA_COMBO') {
-      spawnRandomPowerUp(player.x, player.y, 20, { type: 'invincibility', debug: true });
-    }
-  });
-}
-
-// Example: Stickman integration (powerup effect hooks)
-if (Stickman?.prototype) {
-  // Add a hook for stickman to auto-collect powerups on collision
-  Stickman.prototype.checkPowerUpCollision = function() {
-    const pu = getPowerUpAtPoint?.(this.x, this.y);
-    if (pu?.active) {
-      pu.apply(this);
-      removePowerUpById(pu.id);
-    }
-  };
-}
-
-// Example: Game loop integration (update/draw powerups)
-// In your main game loop (e.g., gameLoop.js), call:
-//   updatePowerUps(delta, canvas.height);
-//   drawAllPowerUps(ctx);
-// And for each stickman: stickman.checkPowerUpCollision();
-
-export function updateAllPowerUps(delta, context) {
-  // Update each power-up (pass canvas height if available)
-  // Determine canvas height from context or DOM
-  let canvasHeight;
-  if (context && context.canvasHeight !== undefined) {
-    canvasHeight = context.canvasHeight;
-  } else if (typeof document !== 'undefined') {
-    const canvas = document.getElementById('gameCanvas');
-    canvasHeight = canvas ? canvas.height : undefined;
-  } else {
-    canvasHeight = undefined;
-  }
-  for (const pu of powerUps) {
-    pu.update(delta, canvasHeight);
-  }
-  // Cleanup expired/inactive power-ups
-  for (let i = powerUps.length - 1; i >= 0; i--) {
-    if (!powerUps[i].active) powerUps.splice(i, 1);
-  }
-}

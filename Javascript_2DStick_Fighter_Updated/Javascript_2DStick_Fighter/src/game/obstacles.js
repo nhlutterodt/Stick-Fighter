@@ -2,6 +2,7 @@
 // Author: Modularized & enhanced from original monolithic code
 
 import { eventManager } from './eventManager.js';
+import { getScreenState } from '../ui/screenManager.js';
 
 /**
  * Represents a static rectangular obstacle (platform, wall, etc).
@@ -410,6 +411,7 @@ eventManager?.subscribe?.('obstacleError', ({ obstacle, method, error }) => {
  * @param {{ctx: CanvasRenderingContext2D}} context
  */
 export function updateAllObstacles(delta, context) {
+  if (getScreenState && getScreenState() !== 'PLAYING') return;
   const ctx = context?.ctx || (typeof document !== 'undefined' ? document.getElementById('gameCanvas')?.getContext('2d') : null);
   if (!ctx) return;
   // Draw static obstacles

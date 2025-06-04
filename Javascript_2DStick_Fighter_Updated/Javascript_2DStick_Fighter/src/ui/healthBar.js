@@ -2,6 +2,7 @@
 // Author: Modularized for ES, accessibility, and advanced UI/UX
 
 import { eventManager } from '../game/eventManager.js';
+import { onScreenStateChange } from './screenManager.js';
 
 const PLAYER_IDS = [1, 2];
 const HEALTH_BAR_IDS = ['player1HealthBarInner', 'player2HealthBarInner'];
@@ -308,6 +309,15 @@ function dispatchHealthBarEvent(eventType, detail = {}) {
     console.error(`[healthBar] Error dispatching event (${eventType}):`, e);
   }
 }
+
+// Hide/show health bars based on screen state
+onScreenStateChange(state => {
+  if (state === 'PLAYING' || state === 'PAUSED') {
+    showHealthBars();
+  } else {
+    hideHealthBars();
+  }
+});
 
 // --- Debug: Expose healthBar state and API for inspection ---
 window.healthBarDebug = {

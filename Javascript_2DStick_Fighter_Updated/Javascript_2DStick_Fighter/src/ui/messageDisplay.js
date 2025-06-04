@@ -2,6 +2,7 @@
 // Author: Modularized for ES, accessibility, and advanced UI/UX
 
 import { eventManager } from '../game/eventManager.js';
+import { onScreenStateChange } from './screenManager.js';
 
 let container = null;
 let hideTimeout = null;
@@ -345,6 +346,17 @@ window.messageDisplayUI = {
   setMessageIcon,
   announceMessageSR
 };
+
+// --- Hide message display except in MENU or END ---
+onScreenStateChange(state => {
+  const msgEl = document.getElementById('messageDisplay');
+  if (!msgEl) return;
+  if (state === 'MENU' || state === 'END') {
+    msgEl.style.display = 'block';
+  } else {
+    msgEl.style.display = 'none';
+  }
+});
 
 // --- Exported API ---
 export {

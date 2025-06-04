@@ -5,6 +5,7 @@ import { updateAllObstacles, drawAllObstacles } from './obstacles.js';
 import { updateAllPowerUps, drawAllPowerUps } from './powerups.js';
 import { updateAllHitSparks, drawAllHitSparks } from './hitSparks.js';
 import { updateAllStickmen, getAllStickmen } from './stickman.js';
+import { getScreenState } from '../ui/screenManager.js';
 
 // Register core systems in the shared context for cross-module access
 registerSystem('eventManager', eventManager);
@@ -17,6 +18,9 @@ registerSystem('hitSparks', gameContext.hitSparks);
 // Unified, extensible game loop with event and debug/diagnostic hooks
 let _gameOverTriggered = false;
 export function integratedGameLoop(delta, contextOverrides = {}) {
+  // Only run game logic if in PLAYING state
+  if (getScreenState && getScreenState() !== 'PLAYING') return;
+
   // DEBUG: log each time game loop runs
   console.debug('[gameLoop] integratedGameLoop called, delta:', delta);
   // Merge context for this frame
