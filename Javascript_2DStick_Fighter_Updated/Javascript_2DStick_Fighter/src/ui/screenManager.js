@@ -26,6 +26,10 @@ export function setScreenState(state) {
   if (gameContext) gameContext.menuState = state;
   listeners.forEach(fn => fn(state));
   eventManager?.dispatchEvent('screenStateChanged', { state });
+  // Dispatch showMenu for menu overlay integration on relevant states
+  if (eventManager && [SCREEN_STATES.MENU, SCREEN_STATES.PAUSED, SCREEN_STATES.SETTINGS, SCREEN_STATES.END].includes(state)) {
+    eventManager.dispatchEvent('showMenu', { state });
+  }
 }
 
 export function onScreenStateChange(fn) {

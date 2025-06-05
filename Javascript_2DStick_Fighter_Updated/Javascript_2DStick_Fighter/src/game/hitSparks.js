@@ -500,6 +500,15 @@ if (eventManager?.subscribe) {
 }
 // --- End integration ---
 
+// Auto-spawn hit sparks on damage events
+if (eventManager?.subscribe) {
+  eventManager.subscribe('playerHit', ({ defender, impact }) => {
+    const x = impact?.x ?? defender.x;
+    const y = impact?.y ?? defender.y - defender.height / 2;
+    hitSparks.push(new HitSpark(x, y, impact?.type || 'default', { impact }));
+  });
+}
+
 export function updateAllHitSparks(delta, context) {
   for (const hs of hitSparks) {
     hs.update(delta, context);

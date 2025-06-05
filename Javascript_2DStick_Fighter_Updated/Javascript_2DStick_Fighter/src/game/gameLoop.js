@@ -6,6 +6,7 @@ import { updateAllPowerUps, drawAllPowerUps } from './powerups.js';
 import { updateAllHitSparks, drawAllHitSparks } from './hitSparks.js';
 import { updateAllStickmen, getAllStickmen } from './stickman.js';
 import { getScreenState } from '../ui/screenManager.js';
+import { saveGameState, loadGameState } from './saveManager.js';
 
 // Register core systems in the shared context for cross-module access
 registerSystem('eventManager', eventManager);
@@ -17,14 +18,20 @@ registerSystem('hitSparks', gameContext.hitSparks);
 
 // Unified, extensible game loop with event and debug/diagnostic hooks
 let _gameOverTriggered = false;
+
+// Helper: debug log for game loop
+function logGameLoopDebug(delta) {
+  if (eventManager.debugMode) console.debug('[gameLoop] integratedGameLoop called, delta:', delta);
+}
+
 export function integratedGameLoop(delta, contextOverrides = {}) {
   // Only run game logic if in PLAYING state
   if (getScreenState && getScreenState() !== 'PLAYING') return;
   // Guard against negative or zero delta
   if (typeof delta !== 'number' || delta <= 0) return;
 
-  // DEBUG: log each time game loop runs
-  console.debug('[gameLoop] integratedGameLoop called, delta:', delta);
+  // Debug hook
+  logGameLoopDebug(delta);
   // Merge context for this frame
   const context = { ...gameContext, ...contextOverrides };
   // Include delta time for systems that need it
@@ -141,3 +148,21 @@ if (eventManager && typeof eventManager.subscribe === 'function') {
     // Propagate to other systems as needed
   });
 }
+
+// Persist game state on request
+eventManager.subscribe('saveGame', () => {
+  const players = getAllStickmen().map((s, i) => ({ index: i, x: s.x, y: s.y, health: s.health, facingRight: s.facingRight }));
+  saveGameState({ players });
+});
+// Load game state on request
+eventManager.subscribe('loadGame', () => {
+  const state = loadGameState();
+  if (state && Array.isArray(state.players)) {
+    state.players.forEach(p => eventManager.dispatchEvent('loadPlayerState', p));
+  }
+});
+// Auto-save on pause and end of fight
+eventManager.subscribe('pause', () => eventManager.dispatchEvent('saveGame'));
+eventManager.subscribe('fightEnd', () => eventManager.dispatchEvent('saveGame'));
+// Optionally auto-load at startup
+eventManager.dispatchEvent('loadGame', {});

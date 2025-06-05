@@ -14,6 +14,11 @@ import {
   SPECIAL_ATTACK_DURATION,
   GRAVITY
 } from './constants.js';
+import { AnimationPlayer } from './AnimationPlayer.js';
+import { idleClip } from './animations.js';
+import { eventManager } from './eventManager.js';
+import { drawBoneCylinder } from './skeleton.js';
+import { spawnHitSpark } from './hitSparks.js';
 
 // --- Stickman Registry for Modular Access ---
 const stickmanRegistry = [];
@@ -117,7 +122,21 @@ export class Stickman {
         this.currentAngles = this.defaultAngles();
         this.targetAngles = this.defaultAngles();
 
+        // Animation player setup
+        this.animPlayer = new AnimationPlayer();
+        this.animPlayer.play(idleClip, { loop: true });
+
+        // Listen for loaded player state
+        eventManager.subscribe('loadPlayerState', ({index, state}) => {
+          if (index === gameContext.players.indexOf(this)) {
+            this.x = state.x;
+            this.y = state.y;
+            this.health = state.health;
+            this.facingRight = state.facingRight;
+          }
+        });
         registerStickman(this);
+        this.idleTime = 0;
     }
 
     defaultAngles() {
@@ -194,66 +213,51 @@ export class Stickman {
     }
 
     draw(ctx) {
-        const joints = this.getJointPositions();
-        if (!joints || !joints.neck) return; // nothing to draw yet
-        ctx.save();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = this.lineWidth;
-        // Draw torso
-        ctx.strokeStyle = this.getLimbColor('torso');
-        ctx.beginPath();
-        ctx.moveTo(joints.neck?.x, joints.neck?.y);
-        ctx.lineTo(joints.hip?.x, joints.hip?.y);
-        ctx.stroke();
-        // Draw head
-        ctx.fillStyle = this.getLimbColor('head');
-        ctx.beginPath();
-        ctx.arc(joints.head?.cx, joints.head?.cy, joints.head?.radius || 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = this.colors.headOutline || '#000';
-        ctx.stroke();
-        // Draw arms and legs (left/right, upper/lower)
-        ctx.strokeStyle = this.getLimbColor('leftUpperArm');
-        ctx.beginPath();
-        ctx.moveTo(joints.leftShoulder.x, joints.leftShoulder.y);
-        ctx.lineTo(joints.leftElbow.x, joints.leftElbow.y);
-        ctx.stroke();
-        ctx.strokeStyle = this.getLimbColor('leftLowerArm');
-        ctx.beginPath();
-        ctx.moveTo(joints.leftElbow.x, joints.leftElbow.y);
-        ctx.lineTo(joints.leftHand.x, joints.leftHand.y);
-        ctx.stroke();
-        ctx.strokeStyle = this.getLimbColor('rightUpperArm');
-        ctx.beginPath();
-        ctx.moveTo(joints.rightShoulder.x, joints.rightShoulder.y);
-        ctx.lineTo(joints.rightElbow.x, joints.rightElbow.y);
-        ctx.stroke();
-        ctx.strokeStyle = this.getLimbColor('rightLowerArm');
-        ctx.beginPath();
-        ctx.moveTo(joints.rightElbow.x, joints.rightElbow.y);
-        ctx.lineTo(joints.rightHand.x, joints.rightHand.y);
-        ctx.stroke();
-        ctx.strokeStyle = this.getLimbColor('leftUpperLeg');
-        ctx.beginPath();
-        ctx.moveTo(joints.hip.x, joints.hip.y);
-        ctx.lineTo(joints.leftKnee.x, joints.leftKnee.y);
-        ctx.stroke();
-        ctx.strokeStyle = this.getLimbColor('leftLowerLeg');
-        ctx.beginPath();
-        ctx.moveTo(joints.leftKnee.x, joints.leftKnee.y);
-        ctx.lineTo(joints.leftFoot.x, joints.leftFoot.y);
-        ctx.stroke();
-        ctx.strokeStyle = this.getLimbColor('rightUpperLeg');
-        ctx.beginPath();
-        ctx.moveTo(joints.hip.x, joints.hip.y);
-        ctx.lineTo(joints.rightKnee.x, joints.rightKnee.y);
-        ctx.stroke();
-        ctx.strokeStyle = this.getLimbColor('rightLowerLeg');
-        ctx.beginPath();
-        ctx.moveTo(joints.rightKnee.x, joints.rightKnee.y);
-        ctx.lineTo(joints.rightFoot.x, joints.rightFoot.y);
-        ctx.stroke();
+      const joints = this.getJointPositions();
+      if (!joints || !joints.neck) return; // nothing to draw yet
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = this.lineWidth;
+        // Torso
+        drawBoneCylinder(ctx, joints.neck, joints.hip, this.lineWidth, this.getLimbColor('torso'));
+      // Draw head with gradient shading
+      const headColor = this.getLimbColor('head');
+      const grad = ctx.createRadialGradient(joints.head.cx, joints.head.cy, joints.head.radius * 0.3, joints.head.cx, joints.head.cy, joints.head.radius);
+      grad.addColorStop(0, headColor);
+      // darker towards rim
+      grad.addColorStop(1, '#00000033');
+      ctx.fillStyle = grad;
+       ctx.beginPath();
+       ctx.arc(joints.head?.cx, joints.head?.cy, joints.head?.radius || 0, 0, Math.PI * 2);
+       ctx.fill();
+      ctx.strokeStyle = this.colors.headOutline || '#000';
+      ctx.stroke();
+        // Arms and legs with cylinder rendering
+        drawBoneCylinder(ctx, joints.leftShoulder, joints.leftElbow, this.lineWidth, this.getLimbColor('leftUpperArm'));
+         ctx.strokeStyle = this.getLimbColor('leftLowerArm');
+         ctx.beginPath();
+         ctx.moveTo(joints.leftElbow.x, joints.leftElbow.y);
+         ctx.lineTo(joints.leftHand.x, joints.leftHand.y);
+         ctx.stroke();
+        drawBoneCylinder(ctx, joints.rightShoulder, joints.rightElbow, this.lineWidth, this.getLimbColor('rightUpperArm'));
+         ctx.strokeStyle = this.getLimbColor('rightLowerArm');
+         ctx.beginPath();
+         ctx.moveTo(joints.rightElbow.x, joints.rightElbow.y);
+         ctx.lineTo(joints.rightHand.x, joints.rightHand.y);
+         ctx.stroke();
+        drawBoneCylinder(ctx, joints.hip, joints.leftKnee, this.lineWidth, this.getLimbColor('leftUpperLeg'));
+         ctx.strokeStyle = this.getLimbColor('leftLowerLeg');
+         ctx.beginPath();
+         ctx.moveTo(joints.leftKnee.x, joints.leftKnee.y);
+         ctx.lineTo(joints.leftFoot.x, joints.leftFoot.y);
+         ctx.stroke();
+        drawBoneCylinder(ctx, joints.hip, joints.rightKnee, this.lineWidth, this.getLimbColor('rightUpperLeg'));
+         ctx.strokeStyle = this.getLimbColor('rightLowerLeg');
+         ctx.beginPath();
+         ctx.moveTo(joints.rightKnee.x, joints.rightKnee.y);
+         ctx.lineTo(joints.rightFoot.x, joints.rightFoot.y);
+         ctx.stroke();
         // Draw special move effect if needed
         if (this.specialMoveType === 'groundSlam' && this.y >= GROUND_LEVEL - this.height / 2 - 5 && !this.groundSlamImpactDone) {
             ctx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
@@ -267,27 +271,88 @@ export class Stickman {
         ctx.restore();
     }
 
+    /**
+     * Play a custom animation clip via API
+     */
+    playAnimation(clip, opts) {
+      this.animPlayer.play(clip, opts);
+    }
+
     // --- Animation and Movement ---
     solveLegIK(targetX, targetY, isLeftLeg) {
-        // ...implement inverse kinematics for leg...
+      // Two-bone IK for leg: hip->knee->foot
+      const l1 = this.limbSegmentLength;
+      const l2 = this.limbSegmentLength;
+      const hipX = this.x;
+      const hipY = this.y;
+      const dx = targetX - hipX;
+      const dy = targetY - hipY;
+      let dist = Math.hypot(dx, dy);
+      dist = Math.min(Math.max(dist, Math.abs(l1 - l2) + 0.0001), l1 + l2 - 0.0001);
+      const angleToTarget = Math.atan2(dy, dx);
+      const cosAngle = (l1*l1 + dist*dist - l2*l2) / (2*l1*dist);
+      const hipAngle = angleToTarget - Math.acos(cosAngle);
+      const kneeAngle = Math.PI - Math.acos((l1*l1 + l2*l2 - dist*dist)/(2*l1*l2));
+      const side = isLeftLeg ? 'left' : 'right';
+      this.currentAngles[`${side}HipZ`] = hipAngle;
+      this.currentAngles[`${side}KneeZ`] = kneeAngle;
     }
     updateTargetAngles() {
-        // ...update target angles for animation...
+      // Basic procedural: copy sampled pose as target
+      this.targetAngles = { ...this.currentAngles };
     }
     applyProceduralAnimation(baseArmAngle, baseElbowAngle, baseHipAngle, baseKneeAngle) {
-        // ...implement procedural animation logic...
+      // Blend to targetAngles if needed
+      for (const key in this.targetAngles) {
+        // simple smoothing
+        this.currentAngles[key] += (this.targetAngles[key] - this.currentAngles[key]) * 0.2;
+      }
     }
-    applyDodgingAngles() { /* ...as before... */ }
-    applyParryAngles() { /* ...as before... */ }
-    applyHitStunAngles() { /* ...as before... */ }
-    applyGuardAngles() { /* ...as before... */ }
-    applySpecialMoveAngles() { /* ...as before... */ }
-    applyWalkingAngles(dir, baseArmAngle, baseElbowAngle) { /* ...as before... */ }
-    applyIdleAngles(dir, baseArmAngle, baseElbowAngle) { /* ...as before... */ }
+    applyWalkingAngles(dir, armSwing, elbowBend, hipSwing, kneeBend) {
+      // Arms
+      this.currentAngles.leftShoulderZ = -armSwing * dir;
+      this.currentAngles.rightShoulderZ = armSwing * dir;
+      this.currentAngles.leftElbowZ = elbowBend;
+      this.currentAngles.rightElbowZ = elbowBend;
+      // Legs
+      this.currentAngles.leftHipZ = hipSwing * dir;
+      this.currentAngles.rightHipZ = -hipSwing * dir;
+      this.currentAngles.leftKneeZ = kneeBend;
+      this.currentAngles.rightKneeZ = kneeBend;
+    }
+    applyIdleAngles(dir, idleArm, idleElbow) {
+      // Slight idle sway on shoulders and elbows
+      this.currentAngles.leftShoulderZ += -idleArm * dir;
+      this.currentAngles.rightShoulderZ += idleArm * dir;
+      this.currentAngles.leftElbowZ += idleElbow;
+      this.currentAngles.rightElbowZ += idleElbow;
+    }
 
     // --- Game Logic ---
     update(opponent, ctx, gameState) {
       const { delta, canvasHeight } = gameState;
+      // Update animation pose
+      const pose = this.animPlayer.update(delta);
+      for (const prop in pose) {
+        this.currentAngles[prop] = pose[prop];
+      }
+      // Procedural animation blending: walking vs idle
+      if (Math.abs(this.velocityX) > 0.1) {
+        this.walkCycleTime += delta * 0.01;
+        const cycle = this.walkCycleTime;
+        const armSwing = 0.5 * Math.sin(cycle);
+        const elbowBend = 0.3 * Math.cos(cycle);
+        const hipSwing = 0.4 * Math.sin(cycle);
+        const kneeBend = 0.2 * Math.cos(cycle);
+        const dir = this.facingRight ? 1 : -1;
+        this.applyWalkingAngles(dir, armSwing, elbowBend, hipSwing, kneeBend);
+      } else {
+        this.idleTime += delta * 0.005;
+        const idleArm = 0.2 * Math.sin(this.idleTime);
+        const idleElbow = 0.1 * Math.cos(this.idleTime);
+        const dir = this.facingRight ? 1 : -1;
+        this.applyIdleAngles(dir, idleArm, idleElbow);
+      }
       // Apply gravity
       this.velocityY += GRAVITY * delta;
       // Update position
@@ -390,7 +455,23 @@ export class Stickman {
         // ...implement hit detection and effects...
     }
     takeDamage(damage, attacker) {
-        // ...implement damage logic, limb impairment, health update, win/lose event...
+        // Basic damage application
+        this.health = Math.max(0, this.health - damage);
+        // Spawn hit spark at defender's chest position
+        spawnHitSpark(this.x, this.y - this.height * 0.3, 'default', { impact: { x: this.x, y: this.y - this.height * 0.3 } });
+        // Play hit sound effect if available
+        try {
+          const audio = window.gameAssets?.hitSound;
+          if (audio) {
+            const sfx = audio.cloneNode();
+            sfx.currentTime = 0;
+            sfx.play().catch(e => console.warn('SFX play failed:', e));
+          }
+        } catch (e) {
+          console.warn('Error playing hit sound:', e);
+        }
+        // Dispatch hit event for UI, SFX, etc.
+        eventManager.dispatchEvent('playerHit', { defender: this, attacker, impact: { x: this.x, y: this.y - this.height * 0.3 } });
     }
     getHitLimbs(attacker) {
         // ...implement limb hit detection...

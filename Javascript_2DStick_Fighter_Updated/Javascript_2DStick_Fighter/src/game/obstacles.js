@@ -427,3 +427,25 @@ export function updateAllObstacles(delta, context) {
 //   new Obstacle(200, 350, 120, 40),
 //   new Obstacle(480, 340, 120, 60)
 // ]);
+
+// Export all obstacle-related functions as a module default for Rollup compatibility
+export default {
+  Obstacle,
+  obstacles,
+  addObstacle,
+  onObstacleDestroyed,
+  removeObstacleById,
+  clearObstacles,
+  checkObstacleCollision,
+  rectsOverlap,
+  drawAllObstacles,
+  getObstacleAtPoint,
+  getObstaclesInRect,
+  getObstacleById,
+  setObstacles,
+  setObstaclesDebug,
+  serializeObstacles,
+  loadObstaclesFromArray,
+  describeAllObstacles,
+  updateAllObstacles
+};

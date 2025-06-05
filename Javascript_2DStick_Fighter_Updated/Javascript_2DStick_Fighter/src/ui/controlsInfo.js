@@ -92,7 +92,19 @@ function createCloseButton() {
 
 function renderControlsInfo() {
   try {
-    if (!container) {
+    // Use the existing #controlsInfo div if present
+    let domContainer = document.getElementById('controlsInfo');
+    if (domContainer) {
+      container = domContainer;
+      container.className = 'controls-info';
+      container.setAttribute('tabindex', '0');
+      container.setAttribute('aria-label', 'Game Controls Information');
+      container.setAttribute('role', 'region');
+      container.style.position = 'relative';
+      container.style.opacity = '0';
+      container.style.transition = 'opacity 0.4s';
+      console.debug('[controlsInfo] Found #controlsInfo container in DOM.');
+    } else if (!container) {
       container = document.createElement('section');
       container.className = 'controls-info';
       container.setAttribute('tabindex', '0');
@@ -102,9 +114,14 @@ function renderControlsInfo() {
       container.style.opacity = '0';
       container.style.transition = 'opacity 0.4s';
       document.body.appendChild(container);
+      console.debug('[controlsInfo] Created fallback controls-info container.');
     }
     const bindings = getKeyBindings();
-    if (!bindings || !bindings.player1 || !bindings.player2) throw new Error('Key bindings missing');
+    if (!bindings?.player1 || !bindings?.player2) {
+      container.innerHTML = `<div style='color:#b91c1c'>Controls info unavailable: Key bindings missing.</div>`;
+      console.warn('[controlsInfo] Key bindings missing, cannot render controls info.');
+      return;
+    }
     container.innerHTML = `
       <h3>Controls</h3>
       <div style="display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;">
@@ -158,6 +175,7 @@ function renderControlsInfo() {
     container.onkeydown = handleKeyNav;
     // Animate in
     setTimeout(() => { container.style.opacity = '1'; }, 10);
+    console.debug('[controlsInfo] Controls info rendered successfully.');
   } catch (e) {
     if (container) container.innerHTML = `<div style="color:#b91c1c">Error loading controls info: ${e.message}</div>`;
     console.warn('[controlsInfo] Render error:', e);
@@ -233,9 +251,9 @@ try {
     });
   }
   // Integrate with messageDisplay.js if available
-  if (window.messageDisplayDebug && typeof window.messageDisplayDebug.onMessageEvent === 'function') {
+  if (window.messageDisplayDebug?.onMessageEvent) {
     window.messageDisplayDebug.onMessageEvent('show', ({ message, opts }) => {
-      if (message && message.toLowerCase().includes('controls')) showControlsInfo();
+      if (message?.toLowerCase().includes('controls')) showControlsInfo();
     });
   }
 } catch (e) {

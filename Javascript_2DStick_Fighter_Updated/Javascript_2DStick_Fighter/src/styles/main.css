@@ -1,4 +1,17 @@
 /* Enhanced, dynamic, and game-ready styles for Stickman Fighter */
+
+/* Theme variables */
+:root {
+  --bg-gradient-start: #f0f0f0;
+  --bg-gradient-end: #e0e7ff;
+  --bg-dark-gradient-start: #23272f;
+  --bg-dark-gradient-end: #3b4252;
+  --font-color-light: #333;
+  --font-color-dark: #e5e7eb;
+  --accent-primary: #60a5fa;
+  --accent-secondary: #3b82f6;
+}
+
 body {
     font-family: 'Inter', sans-serif;
     display: flex;
@@ -7,28 +20,32 @@ body {
     justify-content: center;
     min-height: 100vh;
     margin: 0;
-    background: linear-gradient(135deg, #f0f0f0 60%, #e0e7ff 100%);
-    color: #333;
-    transition: background 0.4s;
-    /* Dynamic: support dark mode */
+    background: linear-gradient(135deg, var(--bg-gradient-start) 60%, var(--bg-gradient-end) 100%);
+    color: var(--font-color-light);
+    transition: background 0.4s, color 0.4s;
 }
 @media (prefers-color-scheme: dark) {
     body {
-        background: linear-gradient(135deg, #23272f 60%, #3b4252 100%);
-        color: #e5e7eb;
+        background: linear-gradient(135deg, var(--bg-dark-gradient-start) 60%, var(--bg-dark-gradient-end) 100%);
+        color: var(--font-color-dark);
     }
     #gameContainer {
-        background: linear-gradient(120deg, #23272f 80%, #2d3340 100%);
-        border-color: #e5e7eb;
+        background: linear-gradient(120deg, var(--bg-dark-gradient-start) 80%, #2d3340 100%);
+        border-color: var(--font-color-dark);
     }
 }
 #gameContainer {
+    width: 800px;
     border: 2px solid #333;
     border-radius: 12px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.13);
     position: relative;
     background: linear-gradient(120deg, #fff 80%, #f3f4f6 100%);
     transition: box-shadow 0.3s;
+    margin: 32px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     /* Dynamic: highlight on focus for accessibility */
 }
 #gameContainer:focus-within {
@@ -80,11 +97,12 @@ canvas {
     0% { filter: brightness(1); }
     100% { filter: brightness(1.25); }
 }
-#messageDisplay, .menu-overlay-text {
+
+/* Overlay elements (global scope) */
+#messageDisplay,
+.menu-overlay-text {
     position: absolute;
-    top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
     font-size: 2.5em;
     font-weight: bold;
     color: #1f2937;
@@ -92,26 +110,65 @@ canvas {
     padding: 24px 36px;
     border-radius: 14px;
     text-align: center;
-    z-index: 10;
-    display: none;
     box-shadow: 0 2px 12px #0002;
     letter-spacing: 0.01em;
-    /* Dynamic: fade in/out for messages */
     opacity: 0;
     transition: opacity 0.4s;
+    display: none;
+    pointer-events: none;
 }
-#messageDisplay.active, .menu-overlay-text.active {
-    display: block;
-    opacity: 1;
+#messageDisplay {
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 30;
 }
 .menu-overlay-text {
     top: 15%;
-    font-size: 2em;
-    padding: 18px 30px;
-    background: rgba(230, 230, 230, 0.97);
-    border-radius: 10px;
-    box-shadow: 0 2px 12px #60a5fa22;
+    transform: translate(-50%, 0);
+    z-index: 40;
 }
+#messageDisplay.active,
+.menu-overlay-text.active {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Menu overlay container */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+}
+.menu-overlay.active {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+/* Health bars (global) */
+#healthBars {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 20;
+}
+#healthBars.active {
+    display: flex;
+}
+
+/* Removed empty ruleset for global overlay/menu rules now handled in #gameContainer scope */
 .controls-info {
     margin-top: 18px;
     padding: 14px 18px;
@@ -357,4 +414,42 @@ button:focus-visible, .menu-button:focus-visible, #resetButton:focus-visible {
     pointer-events: auto;
 }
 
-/* End Advanced UI/UX Features */
+/* Button Styles */
+.menu-button {
+  display: inline-block;
+  min-width: 140px;
+  margin: 10px 0;
+  padding: 14px 32px;
+  font-size: 1.1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent-primary, #60a5fa);
+  color: #fff;
+  box-shadow: 0 2px 8px #0001;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
+  outline: none;
+  letter-spacing: 0.01em;
+}
+.menu-button:focus {
+  box-shadow: 0 0 0 4px #fbbf2444, 0 0 0 8px #60a5fa22;
+  background: var(--accent-secondary, #3b82f6);
+  color: #fff;
+}
+.menu-button:active {
+  background: #2563eb;
+  color: #e0e7ff;
+  transform: scale(0.97);
+}
+.menu-button:hover {
+  background: #3b82f6;
+  color: #fff;
+}
+
+button:disabled, .menu-button:disabled {
+  background: #9ca3af;
+  color: #e5e7eb;
+  cursor: not-allowed;
+  opacity: 0.7;
+}

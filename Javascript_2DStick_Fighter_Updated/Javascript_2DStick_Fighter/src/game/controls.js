@@ -424,6 +424,17 @@ export function enableRemapUI() {
   eventManager.dispatchEvent('showControlsRemap', {});
 }
 
+/**
+ * Attach global listeners for input (idempotent)
+ */
+export function initControls() {
+  if (typeof window !== 'undefined' && !window._stickfighterControlsAttached) {
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window._stickfighterControlsAttached = true;
+  }
+}
+
 // Add JSDoc to all exports for better integration
 export {
     setKeyBindings,

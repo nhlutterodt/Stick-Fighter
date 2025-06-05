@@ -5,6 +5,7 @@ import '../src/ui/controlsInfo.js';
 import '../src/ui/healthBar.js';
 import '../src/ui/menu.js';
 import '../src/ui/messageDisplay.js';
+import './ui/debugPanel.js';
 import { integratedGameLoop } from './game/gameLoop.js';
 import '../src/game/ai.js';
 import '../src/game/controls.js';
@@ -21,6 +22,7 @@ window.eventManager = eventManager;
 
 // --- UI/DOM Bootstrapping with Error Handling, Event Management, and Debugging ---
 window.addEventListener('DOMContentLoaded', () => {
+  console.log('[StickFighter] Page loaded - JS bundle is running.');
   try {
     let paused = false;
     setScreenState('MENU');
@@ -86,12 +88,12 @@ window.addEventListener('DOMContentLoaded', () => {
         paused = !paused;
       }
     });
-    if (window.healthBarUI && window.healthBarUI.renderHealthBars) window.healthBarUI.renderHealthBars();
-    if (window.controlsInfoUI && window.controlsInfoUI.renderControlsInfo) window.controlsInfoUI.renderControlsInfo();
+    window.healthBarUI?.renderHealthBars();
+    window.controlsInfoUI?.renderControlsInfo();
+    // Initial main menu render
+    window.menuUI?.renderMenu();
     // Optionally show main menu or intro message
-    if (window.messageDisplayUI && window.messageDisplayUI.showMessage) {
-      window.messageDisplayUI.showMessage('Welcome to Stick Fighter!');
-    }
+    window.messageDisplayUI?.showMessage('Welcome to Stick Fighter!');
     // Wire up reset button for parity with index.html
     const resetBtn = document.getElementById('resetButton');
     if (resetBtn) {
@@ -99,9 +101,9 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
           // Notify menu system to return to main menu
           eventManager.dispatchEvent('menuMainMenu', {});
-          if (window.menuUI && window.menuUI.updateMenuState) window.menuUI.updateMenuState('MENU');
-          if (window.healthBarUI && window.healthBarUI.hideHealthBars) window.healthBarUI.hideHealthBars();
-          if (window.messageDisplayUI && window.messageDisplayUI.hideMessage) window.messageDisplayUI.hideMessage();
+          window.menuUI?.updateMenuState('MENU');
+          window.healthBarUI?.hideHealthBars();
+          window.messageDisplayUI?.hideMessage();
           const pauseMenu = document.getElementById('pauseMenuTitle');
           if (pauseMenu) pauseMenu.style.display = 'none';
           const settingsMenu = document.getElementById('settingsMenuTitle');
@@ -129,9 +131,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.dispatchEvent(appReadyEvent);
   } catch (e) {
     console.error('[index.js] Error during UI/game bootstrapping:', e);
-    if (window.messageDisplayUI && window.messageDisplayUI.showMessage) {
-      window.messageDisplayUI.showMessage('Critical error during startup. See console for details.', { critical: true, duration: 0 });
-    }
+    window.messageDisplayUI?.showMessage('Critical error during startup. See console for details.', { critical: true, duration: 0 });
   }
 });
 
@@ -148,13 +148,9 @@ window.stickFighterDebug = {
 // --- Global error handler for debugging ---
 window.addEventListener('error', (e) => {
   console.error('[Global Error]', e.message, e.error);
-  if (window.messageDisplayUI && window.messageDisplayUI.showMessage) {
-    window.messageDisplayUI.showMessage('A global error occurred. See console for details.', { critical: true, duration: 0 });
-  }
+  window.messageDisplayUI?.showMessage('A global error occurred. See console for details.', { critical: true, duration: 0 });
 });
 window.addEventListener('unhandledrejection', (e) => {
   console.error('[Global Unhandled Promise Rejection]', e.reason);
-  if (window.messageDisplayUI && window.messageDisplayUI.showMessage) {
-    window.messageDisplayUI.showMessage('A promise error occurred. See console for details.', { critical: true, duration: 0 });
-  }
+  window.messageDisplayUI?.showMessage('A promise error occurred. See console for details.', { critical: true, duration: 0 });
 });

@@ -38,3 +38,5 @@ export function logDiagnostic(event, data) {
   gameContext.diagnostics[event].push(data);
   eventManager?.dispatchEvent('diagnostic', { event, data });
 }
+
+export default gameContext;

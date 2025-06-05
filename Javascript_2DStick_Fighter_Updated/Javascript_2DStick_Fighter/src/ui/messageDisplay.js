@@ -334,17 +334,10 @@ window.messageDisplayUI = {
   hideMessage,
   setCritical,
   isVisible,
-  onMessageEvent,
-  offMessageEvent,
-  dispatchMessageEvent,
   queueMessage,
-  showPersistentMessage,
-  flashMessage,
-  getMessageHistory,
-  clearAllMessages,
-  setMessageStyle,
-  setMessageIcon,
-  announceMessageSR
+  dispatchMessageEvent,
+  onMessageEvent,
+  offMessageEvent
 };
 
 // --- Hide message display except in MENU or END ---
