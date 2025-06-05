@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Stickman Animation Tuner</title>
+    <style>
+        body {
+            margin: 0;
+            overflow-x: hidden; /* Allow vertical scroll for controls if needed */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column; /* Stack canvas and controls vertically */
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: 'Inter', sans-serif;
+            padding: 20px 0; /* Add some padding for controls */
+        }
+        #animationCanvas {
+            border: 1px solid #000;
+            background-color: #e0f7fa; /* Light blue sky */
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .main-controls {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap; /* Allow controls to wrap */
+            gap: 20px;
+            align-items: flex-start; /* Align groups to top */
+            justify-content: center;
+            margin-bottom: 20px;
+            max-width: 90%;
+        }
+        .control-group {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            min-width: 280px; /* Give groups some base width */
+        }
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        .control-item label {
+            min-width: 150px; /* Adjusted Align inputs */
+            text-align: right;
+        }
+        .control-item input[type="range"] {
+            width: 100px; /* Adjusted width */
+        }
+        .control-item input[type="number"] {
+            width: 55px; /* Adjusted width */
+            padding: 3px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .main-controls button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 0.95em;
+        }
+        .main-controls button:hover {
+            background-color: #45a049;
+        }
+        #parameterOutput {
+            width: 90%;
+            max-width: 780px;
+            height: 150px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.85em;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            white-space: pre; /* Preserve formatting for JSON */
+        }
+        .output-container {
+             display: flex;
+             flex-direction: column;
+             align-items: center;
+             width: 100%;
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="animationCanvas"></canvas>
+    
+    <div class="main-controls">
+        <div class="control-group">
+            <h3>Global</h3>
+            <div class="control-item">
+                <label for="animSpeedSlider">Anim Speed:</label>
+                <input type="range" id="animSpeedSlider" min="0.1" max="5" value="1.5" step="0.1">
+                <label for="animSpeedNumber" class="sr-only">Animation Speed Number</label>
+                <input type="number" id="animSpeedNumber" min="0.1" max="5" value="1.5" step="0.1">
+            </div>
+            <div class="control-item">
+                <label for="scrollSpeedSlider">Scroll Speed:</label>
+                <input type="range" id="scrollSpeedSlider" min="0" max="5" value="1.2" step="0.1">
+                <label for="scrollSpeedNumber" class="sr-only">Scroll Speed Number</label>
+                <input type="number" id="scrollSpeedNumber" min="0" max="5" value="1.2" step="0.1">
+            </div>
+            <button id="toggleAnimation">Pause</button>
+        </div>
+        
+        <div class="control-group">
+            <h3>Leg Controls</h3>
+            <div class="control-item">
+                <label for="legSwingAmpSlider">Thigh Swing Amp:</label>
+                <input type="range" id="legSwingAmpSlider" min="0" max="1.57" value="0.44" step="0.01">
+                <label for="legSwingAmpNumber" class="sr-only">Thigh Swing Amplitude Number</label>
+                <input type="number" id="legSwingAmpNumber" min="0" max="1.57" value="0.44" step="0.01">
+            </div>
+            <div class="control-item">
+                <label for="legBaseAngleSlider">Thigh Base Angle:</label>
+                <input type="range" id="legBaseAngleSlider" min="0" max="3.14" value="1.57" step="0.01">
+                <label for="legBaseAngleNumber" class="sr-only">Thigh Base Angle Number</label>
+                <input type="number" id="legBaseAngleNumber" min="0" max="3.14" value="1.57" step="0.01">
+            </div>
+            <div class="control-item">
+                <label for="shinBendAmpSlider">Shin Bend Amp:</label>
+                <input type="range" id="shinBendAmpSlider" min="0" max="1.57" value="0.44" step="0.01">
+                <label for="shinBendAmpNumber" class="sr-only">Shin Bend Amplitude Number</label>
+                <input type="number" id="shinBendAmpNumber" min="0" max="1.57" value="0.44" step="0.01">
+            </div>
+            <div class="control-item">
+                <label for="shinBaseBendSlider">Shin Base Bend:</label>
+                <input type="range" id="shinBaseBendSlider" min="-1.57" max="1.57" value="-0.1" step="0.01">
+                <label for="shinBaseBendNumber" class="sr-only">Shin Base Bend Number</label>
+                <input type="number" id="shinBaseBendNumber" min="-1.57" max="1.57" value="-0.1" step="0.01">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Arm Controls</h3>
+            <div class="control-item">
+                <label for="shoulderYOffsetSlider">Shoulder Y Offset (Neck):</label>
+                <input type="range" id="shoulderYOffsetSlider" min="-20" max="40" value="20" step="1"> {/* Updated default */}
+                <label for="shoulderYOffsetNumber" class="sr-only">Shoulder Y Offset Number</label>
+                <input type="number" id="shoulderYOffsetNumber" min="-20" max="40" value="20" step="1"> {/* Updated default */}
+            </div>
+            <div class="control-item">
+                <label for="shoulderXOffsetSlider">Shoulder X Offset (Center):</label>
+                <input type="range" id="shoulderXOffsetSlider" min="0" max="30" value="12" step="1"> {/* Updated default */}
+                <label for="shoulderXOffsetNumber" class="sr-only">Shoulder X Offset Number</label>
+                <input type="number" id="shoulderXOffsetNumber" min="0" max="30" value="12" step="1"> {/* Updated default */}
+            </div>
+            <div class="control-item">
+                <label for="armSwingAmpSlider">Upper Arm Swing Amp:</label>
+                <input type="range" id="armSwingAmpSlider" min="0" max="1.57" value="0.4" step="0.01"> {/* Updated default */}
+                <label for="armSwingAmpNumber" class="sr-only">Upper Arm Swing Amplitude Number</label>
+                <input type="number" id="armSwingAmpNumber" min="0" max="1.57" value="0.4" step="0.01"> {/* Updated default */}
+            </div>
+            <div class="control-item">
+                <label for="armBaseAngleSlider">Upper Arm Base Angle:</label>
+                <input type="range" id="armBaseAngleSlider" min="0" max="6.28" value="0.54" step="0.01"> {/* Updated default */}
+                <label for="armBaseAngleNumber" class="sr-only">Upper Arm Base Angle Number</label>
+                <input type="number" id="armBaseAngleNumber" min="0" max="6.28" value="0.54" step="0.01"> {/* Updated default */}
+            </div>
+            <div class="control-item">
+                <label for="forearmBendAmpSlider">Forearm Bend Amp:</label>
+                <input type="range" id="forearmBendAmpSlider" min="0" max="1.57" value="0.3" step="0.01"> {/* Updated default */}
+                <label for="forearmBendAmpNumber" class="sr-only">Forearm Bend Amplitude Number</label>
+                <input type="number" id="forearmBendAmpNumber" min="0" max="1.57" value="0.3" step="0.01"> {/* Updated default */}
+            </div>
+            <div class="control-item">
+                <label for="forearmBaseBendSlider">Forearm Base Bend:</label>
+                <input type="range" id="forearmBaseBendSlider" min="-1.57" max="1.57" value="-0.2" step="0.01"> {/* Updated default */}
+                <label for="forearmBaseBendNumber" class="sr-only">Forearm Base Bend Number</label>
+                <input type="number" id="forearmBaseBendNumber" min="-1.57" max="1.57" value="-0.2" step="0.01"> {/* Updated default */}
+            </div>
+        </div>
+        
+        <div class="output-container">
+            <button id="getParametersButton">Get Current Parameters (JSON)</button>
+            <textarea id="parameterOutput" readonly placeholder="Animation parameters will appear here in JSON format..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // --- Canvas Setup ---
+        const canvas = document.getElementById('animationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const maxWidth = 800;
+            const maxHeight = 600;
+            const aspectRatio = maxWidth / maxHeight;
+            let newWidth = window.innerWidth * 0.9;
+            let newHeight = window.innerHeight * 0.6; 
+
+            if (newWidth / newHeight > aspectRatio) newWidth = newHeight * aspectRatio;
+            else newHeight = newWidth / aspectRatio;
+            
+            canvas.width = Math.min(maxWidth, newWidth);
+            canvas.height = Math.min(maxHeight, newHeight);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Bone Class ---
+        class Bone {
+            constructor(id, length, localAngle = 0, thickness = 8, color = '#333') {
+                this.id = id; this.length = length; this.localAngle = localAngle;
+                this.thickness = thickness; this.color = color; this.worldAngle = 0;
+                this.startPoint = { x: 0, y: 0 }; this.endPoint = { x: 0, y: 0 };
+                this.parent = null; this.children = [];
+            }
+            addChild(childBone) { this.children.push(childBone); childBone.parent = this; }
+            updateWorldTransform(parentStartPoint, parentWorldAngle) {
+                this.worldAngle = parentWorldAngle + this.localAngle;
+                this.startPoint = { ...parentStartPoint }; 
+                this.endPoint.x = this.startPoint.x + this.length * Math.cos(this.worldAngle);
+                this.endPoint.y = this.startPoint.y + this.length * Math.sin(this.worldAngle);
+                for (const child of this.children) child.updateWorldTransform(this.endPoint, this.worldAngle);
+            }
+            draw(ctx) {
+                // Handle invisible connector bones: do not draw them, but draw their children.
+                if (this.id.endsWith('ShoulderConnector')) {
+                    for (const child of this.children) {
+                        child.draw(ctx); // Draw the arm attached to this connector
+                    }
+                    return; // Connector itself is not drawn
+                }
+
+                // --- Drawing for VISIBLE bones ---
+                if (this.id === 'head') {
+                    ctx.beginPath();
+                    ctx.arc(this.startPoint.x, this.startPoint.y, this.length, 0, Math.PI * 2); // Use length as radius
+                    ctx.fillStyle = this.color; ctx.fill();
+                    ctx.strokeStyle = '#333'; ctx.lineWidth = this.thickness; ctx.stroke(); // Thickness for outline
+                } else {
+                    // Draw other bones as a line
+                    ctx.beginPath();
+                    ctx.moveTo(this.startPoint.x, this.startPoint.y);
+                    ctx.lineTo(this.endPoint.x, this.endPoint.y);
+                    ctx.lineWidth = this.thickness; ctx.strokeStyle = this.color;
+                    ctx.lineCap = 'round'; ctx.stroke();
+                }
+
+                // Draw joint at the START of this bone (connection to parent)
+                // Only if it has a parent, is not the head, and its parent is NOT a shoulder connector
+                if (this.parent && this.id !== 'head' && !this.parent.id.endsWith('ShoulderConnector')) {
+                    ctx.beginPath();
+                    ctx.arc(this.startPoint.x, this.startPoint.y, Math.max(2, this.thickness / 2.2), 0, Math.PI * 2);
+                    ctx.fillStyle = this.parent.color || '#555555'; // Use parent's color or a default
+                    ctx.fill();
+                }
+                
+                // Recursively draw ALL children. The child's draw method will handle its own visibility/type.
+                for (const child of this.children) {
+                    child.draw(ctx);
+                }
+            }
+        }
+
+        // --- Stickman Class ---
+        class Stickman {
+            constructor(x, y, initialParams) {
+                this.position = { x: x, y: y };
+                this.params = JSON.parse(JSON.stringify(initialParams)); // Deep copy
+                this.skeleton = this.createSkeleton();
+            }
+
+            createSkeleton() {
+                const root = new Bone("root", 0, 0);
+                root.startPoint = { ...this.position }; root.worldAngle = 0;
+
+                const actualTorso = new Bone("actualTorso", 60, -Math.PI / 2, 10, '#4A4A4A');
+                root.addChild(actualTorso);
+                const head = new Bone("head", 15, 0, 2, '#FFDB58'); // thickness is outline for head
+                actualTorso.addChild(head);
+
+                // --- Shoulder Connector Bones ---
+                const torsoWorldAngle = -Math.PI / 2; // actualTorso's world angle is fixed relative to root
+
+                // Right Shoulder
+                const r_world_offset_x = this.params.arms.shoulderXOffsetFromCenter;
+                const r_world_offset_y = this.params.arms.shoulderYOffsetFromNeck; // Positive Y from UI means screen down
+                const r_world_target_angle = Math.atan2(r_world_offset_y, r_world_offset_x);
+                const r_connector_length = Math.sqrt(r_world_offset_x**2 + r_world_offset_y**2);
+                const r_connector_local_angle = r_world_target_angle - torsoWorldAngle;
+
+                // Left Shoulder
+                const l_world_offset_x = -this.params.arms.shoulderXOffsetFromCenter; // Mirrored X for left
+                const l_world_offset_y = this.params.arms.shoulderYOffsetFromNeck;
+                const l_world_target_angle = Math.atan2(l_world_offset_y, l_world_offset_x);
+                const l_connector_length = Math.sqrt(l_world_offset_x**2 + l_world_offset_y**2);
+                const l_connector_local_angle = l_world_target_angle - torsoWorldAngle;
+
+                const rightShoulderConnector = new Bone("rightShoulderConnector", r_connector_length, r_connector_local_angle, 0); 
+                const leftShoulderConnector = new Bone("leftShoulderConnector", l_connector_length, l_connector_local_angle, 0); 
+                
+                actualTorso.addChild(rightShoulderConnector);
+                actualTorso.addChild(leftShoulderConnector);
+
+                const rightUpperArm = new Bone("rightUpperArm", 40, this.params.arms.baseLocalAngle, 7, '#5D5D5D');
+                const rightForearm = new Bone("rightForearm", 35, this.params.arms.forearmBaseBend, 6, '#707070');
+                rightUpperArm.addChild(rightForearm); 
+                rightShoulderConnector.addChild(rightUpperArm);
+
+                const leftUpperArm = new Bone("leftUpperArm", 40, this.params.arms.baseLocalAngle, 7, '#5D5D5D');
+                const leftForearm = new Bone("leftForearm", 35, this.params.arms.forearmBaseBend, 6, '#707070');
+                leftUpperArm.addChild(leftForearm); 
+                leftShoulderConnector.addChild(leftUpperArm);
+                
+                const legSpread = 0.05; 
+                const rightThigh = new Bone("rightThigh", 50, this.params.legs.baseAngle + legSpread, 8, '#505050');
+                const rightShin = new Bone("rightShin", 45, this.params.legs.shinBaseBend, 7, '#656565');
+                rightThigh.addChild(rightShin); root.addChild(rightThigh);
+
+                const leftThigh = new Bone("leftThigh", 50, this.params.legs.baseAngle - legSpread, 8, '#505050');
+                const leftShin = new Bone("leftShin", 45, this.params.legs.shinBaseBend, 7, '#656565');
+                leftThigh.addChild(leftShin); root.addChild(leftThigh);
+                
+                return root;
+            }
+
+            updateAnimation(time) {
+                const effectiveTime = time * this.params.animationSpeedFactor;
+                const p = this.params; 
+
+                const rightThigh = this.findBoneById("rightThigh");
+                const leftThigh = this.findBoneById("leftThigh");
+                const rightShin = this.findBoneById("rightShin");
+                const leftShin = this.findBoneById("leftShin");
+                const rightUpperArm = this.findBoneById("rightUpperArm");
+                const leftUpperArm = this.findBoneById("leftUpperArm");
+                const rightForearm = this.findBoneById("rightForearm");
+                const leftForearm = this.findBoneById("leftForearm");
+
+                if (rightThigh) rightThigh.localAngle = p.legs.baseAngle + Math.sin(effectiveTime) * p.legs.swingAmplitude;
+                if (leftThigh) leftThigh.localAngle = p.legs.baseAngle + Math.sin(effectiveTime + Math.PI) * p.legs.swingAmplitude;
+                
+                if (rightShin) rightShin.localAngle = p.legs.shinBaseBend - ((Math.sin(effectiveTime + Math.PI / 2) * 0.5 + 0.5) * p.legs.shinBendAmplitude);
+                if (leftShin) leftShin.localAngle = p.legs.shinBaseBend - ((Math.sin(effectiveTime + Math.PI + Math.PI / 2) * 0.5 + 0.5) * p.legs.shinBendAmplitude);
+
+                if (rightUpperArm) rightUpperArm.localAngle = p.arms.baseLocalAngle + Math.sin(effectiveTime + Math.PI) * p.arms.swingAmplitude;
+                if (leftUpperArm) leftUpperArm.localAngle = p.arms.baseLocalAngle + Math.sin(effectiveTime) * p.arms.swingAmplitude;
+
+                if (rightForearm) rightForearm.localAngle = p.arms.forearmBaseBend - ((Math.sin(effectiveTime + Math.PI * 0.6) * 0.5 + 0.5) * p.arms.forearmBendAmplitude);
+                if (leftForearm) leftForearm.localAngle = p.arms.forearmBaseBend - ((Math.sin(effectiveTime + Math.PI * 1.6) * 0.5 + 0.5) * p.arms.forearmBendAmplitude);
+
+                this.position.x += p.scrollSpeed;
+                if (this.position.x > canvas.width + 100 ) { 
+                    this.position.x = -100;
+                }
+
+                this.skeleton.startPoint = { ...this.position };
+                this.skeleton.updateWorldTransform(this.skeleton.startPoint, this.skeleton.worldAngle);
+            }
+
+            findBoneById(id, bone = this.skeleton) {
+                if (bone.id === id) return bone;
+                for (const child of bone.children) {
+                    const found = this.findBoneById(id, child);
+                    if (found) return found;
+                }
+                return null;
+            }
+
+            draw(ctx) {
+                for (const child of this.skeleton.children) {
+                    child.draw(ctx);
+                }
+                ctx.beginPath(); ctx.moveTo(0, canvas.height - 20);
+                ctx.lineTo(canvas.width, canvas.height - 20);
+                ctx.lineWidth = 3; ctx.strokeStyle = '#795548'; ctx.stroke();
+            }
+            
+            setParam(category, paramName, value) {
+                const parsedValue = parseFloat(value);
+                if (isNaN(parsedValue)) return; 
+
+                if (category === 'global') {
+                    this.params[paramName] = parsedValue;
+                } else if (this.params[category] && this.params[category].hasOwnProperty(paramName)) {
+                    this.params[category][paramName] = parsedValue;
+                }
+                
+                const structuralParams = ['baseangle', 'basebend', 'shoulderxoffsetfromcenter', 'shoulderyoffsetfromneck'];
+                if (structuralParams.some(p => paramName.toLowerCase().includes(p))) {
+                    this.skeleton = this.createSkeleton();
+                }
+            }
+
+            getAnimationParameters() {
+                return JSON.parse(JSON.stringify(this.params));
+            }
+        }
+
+        let stickman;
+        let animationTime = 0;
+        let lastTimestamp = 0;
+        let isPaused = false;
+
+        const initialAnimationParameters = {
+            animationSpeedFactor: 1.5,
+            scrollSpeed: 1.2,
+            legs: {
+                swingAmplitude: 0.44, 
+                baseAngle: 1.57, 
+                shinBendAmplitude: 0.44,
+                shinBaseBend: -0.1 
+            },
+            arms: {
+                shoulderYOffsetFromNeck: 20, 
+                shoulderXOffsetFromCenter: 12,  
+                swingAmplitude: 0.4, 
+                baseLocalAngle: 0.54, 
+                forearmBendAmplitude: 0.3,
+                forearmBaseBend: -0.2 
+            }
+        };
+
+        const uiElements = {
+            animSpeedSlider: document.getElementById('animSpeedSlider'),
+            animSpeedNumber: document.getElementById('animSpeedNumber'),
+            scrollSpeedSlider: document.getElementById('scrollSpeedSlider'),
+            scrollSpeedNumber: document.getElementById('scrollSpeedNumber'),
+            toggleAnimationButton: document.getElementById('toggleAnimation'),
+            legSwingAmpSlider: document.getElementById('legSwingAmpSlider'),
+            legSwingAmpNumber: document.getElementById('legSwingAmpNumber'),
+            legBaseAngleSlider: document.getElementById('legBaseAngleSlider'),
+            legBaseAngleNumber: document.getElementById('legBaseAngleNumber'),
+            shinBendAmpSlider: document.getElementById('shinBendAmpSlider'),
+            shinBendAmpNumber: document.getElementById('shinBendAmpNumber'),
+            shinBaseBendSlider: document.getElementById('shinBaseBendSlider'),
+            shinBaseBendNumber: document.getElementById('shinBaseBendNumber'),
+            shoulderYOffsetSlider: document.getElementById('shoulderYOffsetSlider'),
+            shoulderYOffsetNumber: document.getElementById('shoulderYOffsetNumber'),
+            shoulderXOffsetSlider: document.getElementById('shoulderXOffsetSlider'),
+            shoulderXOffsetNumber: document.getElementById('shoulderXOffsetNumber'),
+            armSwingAmpSlider: document.getElementById('armSwingAmpSlider'),
+            armSwingAmpNumber: document.getElementById('armSwingAmpNumber'),
+            armBaseAngleSlider: document.getElementById('armBaseAngleSlider'),
+            armBaseAngleNumber: document.getElementById('armBaseAngleNumber'),
+            forearmBendAmpSlider: document.getElementById('forearmBendAmpSlider'),
+            forearmBendAmpNumber: document.getElementById('forearmBendAmpNumber'),
+            forearmBaseBendSlider: document.getElementById('forearmBaseBendSlider'),
+            forearmBaseBendNumber: document.getElementById('forearmBaseBendNumber'),
+            getParametersButton: document.getElementById('getParametersButton'),
+            parameterOutput: document.getElementById('parameterOutput')
+        };
+        
+        function init() {
+            const groundY = canvas.height - 20;
+            const stickmanInitialY = groundY - 92; 
+            stickman = new Stickman(50, stickmanInitialY, initialAnimationParameters); 
+            setupUIEventListeners();
+            updateUIToMatchParams(stickman.params);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(timestamp) {
+            const deltaTime = (timestamp - lastTimestamp) / 1000 || 0;
+            lastTimestamp = timestamp;
+            if (!isPaused) {
+                animationTime += deltaTime * 10;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                stickman.updateAnimation(animationTime);
+                stickman.draw(ctx);
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function syncSliderAndNumber(slider, numberInput) {
+            slider.addEventListener('input', () => numberInput.value = slider.value);
+            numberInput.addEventListener('input', () => slider.value = numberInput.value);
+        }
+
+        function setupUIEventListeners() {
+            syncSliderAndNumber(uiElements.animSpeedSlider, uiElements.animSpeedNumber);
+            uiElements.animSpeedSlider.addEventListener('input', (e) => stickman.setParam('global', 'animationSpeedFactor', e.target.value));
+            uiElements.animSpeedNumber.addEventListener('input', (e) => stickman.setParam('global', 'animationSpeedFactor', e.target.value));
+            
+            syncSliderAndNumber(uiElements.scrollSpeedSlider, uiElements.scrollSpeedNumber);
+            uiElements.scrollSpeedSlider.addEventListener('input', (e) => stickman.setParam('global', 'scrollSpeed', e.target.value));
+            uiElements.scrollSpeedNumber.addEventListener('input', (e) => stickman.setParam('global', 'scrollSpeed', e.target.value));
+
+            uiElements.toggleAnimationButton.addEventListener('click', () => {
+                isPaused = !isPaused;
+                uiElements.toggleAnimationButton.textContent = isPaused ? 'Play' : 'Pause';
+            });
+
+            syncSliderAndNumber(uiElements.legSwingAmpSlider, uiElements.legSwingAmpNumber);
+            uiElements.legSwingAmpSlider.addEventListener('input', (e) => stickman.setParam('legs', 'swingAmplitude', e.target.value));
+            uiElements.legSwingAmpNumber.addEventListener('input', (e) => stickman.setParam('legs', 'swingAmplitude', e.target.value));
+            
+            syncSliderAndNumber(uiElements.legBaseAngleSlider, uiElements.legBaseAngleNumber);
+            uiElements.legBaseAngleSlider.addEventListener('input', (e) => stickman.setParam('legs', 'baseAngle', e.target.value));
+            uiElements.legBaseAngleNumber.addEventListener('input', (e) => stickman.setParam('legs', 'baseAngle', e.target.value));
+
+            syncSliderAndNumber(uiElements.shinBendAmpSlider, uiElements.shinBendAmpNumber);
+            uiElements.shinBendAmpSlider.addEventListener('input', (e) => stickman.setParam('legs', 'shinBendAmplitude', e.target.value));
+            uiElements.shinBendAmpNumber.addEventListener('input', (e) => stickman.setParam('legs', 'shinBendAmplitude', e.target.value));
+            
+            syncSliderAndNumber(uiElements.shinBaseBendSlider, uiElements.shinBaseBendNumber);
+            uiElements.shinBaseBendSlider.addEventListener('input', (e) => stickman.setParam('legs', 'shinBaseBend', e.target.value));
+            uiElements.shinBaseBendNumber.addEventListener('input', (e) => stickman.setParam('legs', 'shinBaseBend', e.target.value));
+
+            syncSliderAndNumber(uiElements.shoulderYOffsetSlider, uiElements.shoulderYOffsetNumber);
+            uiElements.shoulderYOffsetSlider.addEventListener('input', (e) => stickman.setParam('arms', 'shoulderYOffsetFromNeck', e.target.value));
+            uiElements.shoulderYOffsetNumber.addEventListener('input', (e) => stickman.setParam('arms', 'shoulderYOffsetFromNeck', e.target.value));
+            
+            syncSliderAndNumber(uiElements.shoulderXOffsetSlider, uiElements.shoulderXOffsetNumber);
+            uiElements.shoulderXOffsetSlider.addEventListener('input', (e) => stickman.setParam('arms', 'shoulderXOffsetFromCenter', e.target.value));
+            uiElements.shoulderXOffsetNumber.addEventListener('input', (e) => stickman.setParam('arms', 'shoulderXOffsetFromCenter', e.target.value));
+
+            syncSliderAndNumber(uiElements.armSwingAmpSlider, uiElements.armSwingAmpNumber);
+            uiElements.armSwingAmpSlider.addEventListener('input', (e) => stickman.setParam('arms', 'swingAmplitude', e.target.value));
+            uiElements.armSwingAmpNumber.addEventListener('input', (e) => stickman.setParam('arms', 'swingAmplitude', e.target.value));
+
+            syncSliderAndNumber(uiElements.armBaseAngleSlider, uiElements.armBaseAngleNumber);
+            uiElements.armBaseAngleSlider.addEventListener('input', (e) => stickman.setParam('arms', 'baseLocalAngle', e.target.value));
+            uiElements.armBaseAngleNumber.addEventListener('input', (e) => stickman.setParam('arms', 'baseLocalAngle', e.target.value));
+            
+            syncSliderAndNumber(uiElements.forearmBendAmpSlider, uiElements.forearmBendAmpNumber);
+            uiElements.forearmBendAmpSlider.addEventListener('input', (e) => stickman.setParam('arms', 'forearmBendAmplitude', e.target.value));
+            uiElements.forearmBendAmpNumber.addEventListener('input', (e) => stickman.setParam('arms', 'forearmBendAmplitude', e.target.value));
+
+            syncSliderAndNumber(uiElements.forearmBaseBendSlider, uiElements.forearmBaseBendNumber);
+            uiElements.forearmBaseBendSlider.addEventListener('input', (e) => stickman.setParam('arms', 'forearmBaseBend', e.target.value));
+            uiElements.forearmBaseBendNumber.addEventListener('input', (e) => stickman.setParam('arms', 'forearmBaseBend', e.target.value));
+
+            uiElements.getParametersButton.addEventListener('click', () => {
+                const currentParams = stickman.getAnimationParameters();
+                uiElements.parameterOutput.value = JSON.stringify(currentParams, null, 2); 
+            });
+        }
+        
+        function updateUIToMatchParams(params) {
+            uiElements.animSpeedSlider.value = params.animationSpeedFactor;
+            uiElements.animSpeedNumber.value = params.animationSpeedFactor;
+            uiElements.scrollSpeedSlider.value = params.scrollSpeed;
+            uiElements.scrollSpeedNumber.value = params.scrollSpeed;
+
+            uiElements.legSwingAmpSlider.value = params.legs.swingAmplitude;
+            uiElements.legSwingAmpNumber.value = params.legs.swingAmplitude;
+            uiElements.legBaseAngleSlider.value = params.legs.baseAngle;
+            uiElements.legBaseAngleNumber.value = params.legs.baseAngle;
+            uiElements.shinBendAmpSlider.value = params.legs.shinBendAmplitude;
+            uiElements.shinBendAmpNumber.value = params.legs.shinBendAmplitude;
+            uiElements.shinBaseBendSlider.value = params.legs.shinBaseBend;
+            uiElements.shinBaseBendNumber.value = params.legs.shinBaseBend;
+
+            uiElements.shoulderYOffsetSlider.value = params.arms.shoulderYOffsetFromNeck;
+            uiElements.shoulderYOffsetNumber.value = params.arms.shoulderYOffsetFromNeck;
+            uiElements.shoulderXOffsetSlider.value = params.arms.shoulderXOffsetFromCenter;
+            uiElements.shoulderXOffsetNumber.value = params.arms.shoulderXOffsetFromCenter;
+            
+            uiElements.armSwingAmpSlider.value = params.arms.swingAmplitude;
+            uiElements.armSwingAmpNumber.value = params.arms.swingAmplitude;
+            uiElements.armBaseAngleSlider.value = params.arms.baseLocalAngle;
+            uiElements.armBaseAngleNumber.value = params.arms.baseLocalAngle;
+            uiElements.forearmBendAmpSlider.value = params.arms.forearmBendAmplitude;
+            uiElements.forearmBendAmpNumber.value = params.arms.forearmBendAmplitude;
+            uiElements.forearmBaseBendSlider.value = params.arms.forearmBaseBend;
+            uiElements.forearmBaseBendNumber.value = params.arms.forearmBaseBend;
+        }
+
+        init();
+    </script>
+</body>
+</html>

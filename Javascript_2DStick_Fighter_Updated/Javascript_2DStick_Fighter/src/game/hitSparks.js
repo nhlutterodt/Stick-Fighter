@@ -445,20 +445,59 @@ if (eventManager?.subscribe) {
 // 3. Stickman integration: move/character-based, directional, and combo hit sparks
 if (Stickman?.prototype) {
   Stickman.prototype.spawnHitSparkOnHit = function(target, move, attackInfo = {}) {
-    // move: string (e.g., 'firePunch'), attackInfo: { angle, force, character }
-    spawnHitSpark(
-      target.x,
-      target.y,
-      move || 'default',
-      {
-        impact: { angle: attackInfo.angle, force: attackInfo.force },
-        style: move,
-        character: this.characterName,
-        screenShake: attackInfo.critical ? 12 : 0,
-        slowMo: attackInfo.critical ? 200 : 0,
-        debug: true
+    try {
+      // Validate required parameters
+      if (!target || typeof target.x !== 'number' || typeof target.y !== 'number') {
+        console.warn('[hitSparks] Invalid target provided to spawnHitSparkOnHit:', target);
+        return null;
       }
-    );
+
+      // Sanitize move parameter
+      const sanitizedMove = typeof move === 'string' && move.trim() ? move.trim() : 'default';
+      
+      // Validate and sanitize attackInfo
+      const validatedAttackInfo = {
+        angle: typeof attackInfo.angle === 'number' && !isNaN(attackInfo.angle) ? attackInfo.angle : null,
+        force: typeof attackInfo.force === 'number' && attackInfo.force > 0 ? attackInfo.force : 1,
+        critical: Boolean(attackInfo.critical)
+      };
+
+      // Validate character name
+      const characterName = typeof this.characterName === 'string' ? this.characterName : 'unknown';
+
+      // Create hit spark with validated parameters
+      const hitSpark = spawnHitSpark(
+        target.x,
+        target.y,
+        sanitizedMove,
+        {
+          impact: { 
+            angle: validatedAttackInfo.angle, 
+            force: validatedAttackInfo.force 
+          },
+          style: sanitizedMove,
+          character: characterName,
+          screenShake: validatedAttackInfo.critical ? 12 : 0,
+          slowMo: validatedAttackInfo.critical ? 200 : 0,
+          debug: true
+        }
+      );
+
+      if (!hitSpark) {
+        console.warn('[hitSparks] Failed to spawn hit spark for move:', sanitizedMove);
+      }
+
+      return hitSpark;
+
+    } catch (error) {
+      console.error('[hitSparks] Error in spawnHitSparkOnHit:', error.message, {
+        target: target ? { x: target.x, y: target.y } : null,
+        move,
+        attackInfo,
+        character: this.characterName
+      });
+      return null;
+    }
   };
 }
 

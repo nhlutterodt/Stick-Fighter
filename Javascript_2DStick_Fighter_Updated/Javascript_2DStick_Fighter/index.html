@@ -4,16 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stick Fighter</title>
-  <link rel="stylesheet" href="src/styles/main.css">
+  <link rel="stylesheet" href="src/styles/main.css"> <!-- Update to dist/styles/main.css if you move the file -->
 </head>
 <body>
   <!-- Canvas for game rendering -->
-  <div id="gameContainer">
-    <canvas id="gameCanvas"></canvas>
-  </div>
+  <canvas id="gameCanvas"></canvas>
 
   <!-- Health bars (hidden until game start) -->
-  <div id="healthBars" class="health-bar-container" style="display:none;">
+  <div id="healthBars" class="health-bar-container hidden">
     <div id="player1HealthBar" class="health-bar player-1-health">
       <div id="player1HealthBarInner" class="health-bar-inner"></div>
     </div>
@@ -23,7 +21,7 @@
   </div>
 
   <!-- Message display area -->
-  <div id="messageDisplay"></div>
+  <div id="messageDisplay" aria-live="polite"></div>
 
   <!-- Controls info overlay -->
   <section id="controlsInfo" class="controls-info"></section>
