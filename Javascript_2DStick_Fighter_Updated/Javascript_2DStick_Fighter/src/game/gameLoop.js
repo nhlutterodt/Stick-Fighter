@@ -20,6 +20,8 @@ let _gameOverTriggered = false;
 export function integratedGameLoop(delta, contextOverrides = {}) {
   // Only run game logic if in PLAYING state
   if (getScreenState && getScreenState() !== 'PLAYING') return;
+  // Guard against negative or zero delta
+  if (typeof delta !== 'number' || delta <= 0) return;
 
   // DEBUG: log each time game loop runs
   console.debug('[gameLoop] integratedGameLoop called, delta:', delta);
