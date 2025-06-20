@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Character Creator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            color: #334155;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 1200px;
+            height: 90vh; /* Adjust height to fill more of the viewport */
+        }
+        .header {
+            background-color: #4f46e5;
+            color: #ffffff;
+            padding: 1rem 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .main-content {
+            display: flex;
+            flex-grow: 1;
+            padding: 1.5rem;
+            gap: 1.5rem;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+        .canvas-container {
+            flex: 3;
+            min-width: 300px; /* Minimum width for canvas */
+            background-color: #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+        canvas {
+            display: block;
+            background-color: transparent;
+        }
+        .controls {
+            flex: 1;
+            min-width: 280px; /* Minimum width for controls */
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            overflow-y: auto; /* Enable scrolling for controls if content overflows */
+        }
+        .control-group {
+            margin-bottom: 1rem;
+        }
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #475569;
+        }
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background-color: #ffffff;
+            color: #334155;
+        }
+        .button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .button-primary {
+            background-color: #4f46e5;
+            color: #ffffff;
+            border: 1px solid #4f46e5;
+            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+        }
+        .button-primary:hover {
+            background-color: #4338ca;
+            border-color: #4338ca;
+            box-shadow: 0 6px 10px rgba(79, 70, 229, 0.3);
+            transform: translateY(-2px);
+        }
+        .button-secondary {
+            background-color: #e2e8f0;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+        .button-secondary:hover {
+            background-color: #cbd5e1;
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+        }
+        .bone-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 0.5rem;
+        }
+        .bone-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0.8rem;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 0.4rem;
+            font-size: 0.95rem;
+            color: #334155;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+        }
+        .bone-list-item:hover {
+            background-color: #f0f4f8;
+            border-color: #cbd5e1;
+        }
+        .bone-list-item.selected {
+            background-color: #bfdbfe;
+            border-color: #3b82f6;
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+        .sliders {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .slider-group input[type="range"] {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            background: #d1d5db;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .15s ease-in-out;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: grab;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.15s ease-in-out;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb:hover {
+            background: #4338ca;
+        }
+        .slider-group span {
+            font-size: 0.9rem;
+            width: 40px;
+            text-align: right;
+            color: #475569;
+        }
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        .form-row > div {
+            flex-grow: 1;
+        }
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            z-index: 1000;
+            display: none;
+            text-align: center;
+        }
+        .message-box.show {
+            display: block;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            .canvas-container, .controls {
+                flex: none; /* Remove flex sizing */
+                width: 100%; /* Take full width */
+            }
+            .container {
+                height: auto; /* Allow height to adjust */
+                min-height: 90vh; /* Ensure minimum height */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <span>2D Character Creator</span>
+            <div class="button-group">
+                <button id="saveCharacterBtn" class="button button-secondary">Save Character</button>
+                <input type="file" id="loadCharacterInput" style="display: none;" accept=".json">
+                <button id="loadCharacterBtn" class="button button-secondary">Load Character</button>
+                <button id="resetCharacterBtn" class="button button-secondary">Reset Character</button>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="characterCanvas"></canvas>
+                <div id="messageBox" class="message-box"></div>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="boneNameInput">Bone Name</label>
+                    <div class="form-row">
+                        <div>
+                            <input type="text" id="boneNameInput" class="input-field" placeholder="e.g., upperArm">
+                        </div>
+                        <button id="addBoneBtn" class="button button-primary">Add Bone</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Bones</label>
+                    <ul id="boneList" class="bone-list">
+                        <!-- Bone items will be injected here by JS -->
+                    </ul>
+                </div>
+
+                <div class="control-group">
+                    <label>Selected Bone Properties</label>
+                    <div class="sliders">
+                        <div class="slider-group">
+                            <span>Length:</span>
+                            <input type="range" id="boneLengthSlider" min="10" max="150" value="50">
+                            <span id="boneLengthValue">50</span>
+                        </div>
+                        <div class="slider-group">
+                            <span>Rotation:</span>
+                            <input type="range" id="boneRotationSlider" min="-180" max="180" value="0">
+                            <span id="boneRotationValue">0°</span>
+                        </div>
+                        <div class="slider-group">
+                            <span>X Pos:</span>
+                            <input type="range" id="boneXSlider" min="-300" max="300" value="0">
+                            <span id="boneXValue">0</span>
+                        </div>
+                        <div class="slider-group">
+                            <span>Y Pos:</span>
+                            <input type="range" id="boneYSlider" min="-300" max="300" value="0">
+                            <span id="boneYValue">0</span>
+                        </div>
+                    </div>
+                    <button id="deleteBoneBtn" class="button button-secondary mt-4">Delete Selected Bone</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Utility function to display messages
+        function showMessage(message, duration = 2000) {
+            const msgBox = document.getElementById('messageBox');
+            msgBox.textContent = message;
+            msgBox.classList.add('show');
+            setTimeout(() => {
+                msgBox.classList.remove('show');
+            }, duration);
+        }
+
+        // --- Core Bone System Classes ---
+
+        // Represents a 2D vector for positions and directions.
+        class Vector2 {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+
+            // Adds another vector to this one.
+            add(otherVector) {
+                return new Vector2(this.x + otherVector.x, this.y + otherVector.y);
+            }
+
+            // Subtracts another vector from this one.
+            subtract(otherVector) {
+                return new Vector2(this.x - otherVector.x, this.y - otherVector.y);
+            }
+
+            // Multiplies the vector by a scalar.
+            multiplyScalar(scalar) {
+                return new Vector2(this.x * scalar, this.y * scalar);
+            }
+
+            // Calculates the length (magnitude) of the vector.
+            length() {
+                return Math.sqrt(this.x * this.x + this.y * this.y);
+            }
+
+            // Normalizes the vector (makes its length 1).
+            normalize() {
+                const len = this.length();
+                return len > 0 ? new Vector2(this.x / len, this.y / len) : new Vector2(0, 0);
+            }
+
+            // Creates a clone of this vector.
+            clone() {
+                return new Vector2(this.x, this.y);
+            }
+        }
+
+        // Represents a single bone in the skeletal hierarchy.
+        class Bone {
+            constructor(name, length, localRotation, parent = null, id = null, color = null, lineWidth = null, scale = 1, layer = 0, velocity = null, angularVelocity = 0, mass = 1, locked = false, rotationConstraint = null, tag = null, meta = null, visible = true, transformMatrix = null) {
+                this.name = name;
+                this.id = id || Bone.generateId(); // Assign a unique ID if not provided
+                this.length = length; // Length of the bone
+                // Ensure localRotation is normalized upon creation
+                this.localRotation = (localRotation + 540) % 360 - 180; // Normalize to -180 to 180
+                this.parent = parent; // Reference to parent bone
+                this.children = []; // Array of child bones
+
+                // World transformation properties (calculated by FK)
+                this.worldStart = new Vector2(0, 0); // World coordinates of the bone's start point
+                this.worldEnd = new Vector2(0, 0);   // World coordinates of the bone's end point
+                this.worldRotation = 0;             // Absolute rotation in world space (in degrees)
+                this.angleRad = 0;                  // Cached world rotation in radians
+
+                // Added for blending/IK readiness, representing a target pose for interpolation
+                this.worldStartTarget = new Vector2(0, 0);
+                this.worldEndTarget = new Vector2(0, 0);
+
+                // Used for rendering and interaction
+                this.color = color || '#4f46e5'; // Default bone color, or loaded from data
+                this.lineWidth = lineWidth || 8;     // Bone thickness, or loaded from data
+                this.scale = scale; // Global scale factor for this bone
+                this.layer = layer; // Visual layer for rendering order (e.g., for Z-ordering)
+                this.visible = visible; // Visibility toggle for editor or runtime
+
+                // Physics stub properties for future simulation integration
+                this.velocity = velocity || new Vector2(0, 0); // Linear velocity
+                this.angularVelocity = angularVelocity;        // Rotational velocity (degrees per frame/sec)
+                this.mass = mass;                              // Mass for physics calculations
+
+                // Behavioral hooks and constraints
+                this.locked = locked; // If true, bone cannot be manipulated by direct user input or certain IK solvers
+                // rotationConstraint: { min: -90, max: 90 } degrees
+                this.rotationConstraint = rotationConstraint || null; // Optional: min/max rotation limits
+
+                // Convenience and Metadata
+                this.tag = tag || null; // e.g., "arm", "weaponPivot", "guide"
+                this.meta = meta || {}; // Custom data for serialization/UX
+
+                // Optional: Transform Matrix Caching for GPU pipelines
+                this.transformMatrix = transformMatrix || null; // Cache 2D transform matrix (e.g., for WebGL)
+
+                // Bounding info, initially empty, would be calculated after geometry is defined
+                // For simple 2D capsules, min/max can be derived from worldStart/worldEnd and lineWidth
+                this.bounds = { min: new Vector2(0,0), max: new Vector2(0,0) };
+            }
+
+            // Adds a child bone to this bone, preventing duplicates.
+            addChild(bone) {
+                if (!this.children.includes(bone)) { // Prevent accidental duplicate child linkage
+                    this.children.push(bone);
+                    bone.parent = this;
+                }
+            }
+
+            // Updates the bone's world transform based on its parent's transform.
+            // This is the core of Forward Kinematics.
+            updateWorldTransform() {
+                if (this.parent) {
+                    this.worldStart = this.parent.worldEnd;
+                    // Accumulate parent's world rotation and local rotation, then normalize
+                    this.worldRotation = (this.parent.worldRotation + this.localRotation + 540) % 360 - 180;
+                } else {
+                    // This is the root bone, its start position is its own origin, and rotation is local.
+                    // For a character creator, we allow manual placement of the root.
+                    // For non-root bones, worldStart is set by parent.
+                    // We will set root's worldStart via character's base position.
+                    this.worldRotation = (this.localRotation + 540) % 360 - 180;
+                }
+
+                // Cache world rotation in radians
+                this.angleRad = (this.worldRotation * Math.PI) / 180;
+
+                // Calculate the world end point of the bone, applying bone's scale
+                this.worldEnd.x = this.worldStart.x + this.length * this.scale * Math.cos(this.angleRad);
+                this.worldEnd.y = this.worldStart.y + this.length * this.scale * Math.sin(this.angleRad);
+
+                // Update target positions (useful for blending/IK)
+                this.worldStartTarget = this.worldStart.clone();
+                this.worldEndTarget = this.worldEnd.clone();
+
+                // Recursively update children
+                this.children.forEach(child => child.updateWorldTransform());
+
+                // Update bounds after all transforms are calculated
+                this.updateBounds();
+
+                // Optional: Recompute transformMatrix if caching
+                // this.transformMatrix = this.computeMatrixFromWorldTransform();
+            }
+
+            // Optional: Allows a bone to respond to time or behaviors.
+            updateBehavior(deltaTime) {
+                // Implement procedural breathing, twitching, constraint reactions, etc.
+                // This method would be called by the main animation loop.
+            }
+
+            // Returns a normalized direction vector for the bone.
+            getDirection() {
+                // Ensure angleRad is up-to-date before returning.
+                // It's calculated in updateWorldTransform, which runs every frame.
+                return new Vector2(
+                    Math.cos(this.angleRad),
+                    Math.sin(this.angleRad)
+                );
+            }
+
+            // Calculates and updates the bounding box for the bone.
+            // This method should be called after updateWorldTransform().
+            updateBounds() {
+                const halfWidth = this.lineWidth / 2;
+                this.bounds.min.x = Math.min(this.worldStart.x, this.worldEnd.x) - halfWidth;
+                this.bounds.min.y = Math.min(this.worldStart.y, this.worldEnd.y) - halfWidth;
+                this.bounds.max.x = Math.max(this.worldStart.x, this.worldEnd.x) + halfWidth;
+                this.bounds.max.y = Math.max(this.worldStart.y, this.worldEnd.y) + halfWidth;
+            }
+
+            // Converts the bone's data to a serializable object.
+            toJson() {
+                return {
+                    name: this.name,
+                    id: this.id, // Include unique ID
+                    length: this.length,
+                    localRotation: this.localRotation,
+                    parentName: this.parent ? this.parent.name : null,
+                    color: this.color, // Include visual attributes
+                    lineWidth: this.lineWidth,
+                    scale: this.scale, // Include scale
+                    layer: this.layer, // Include layer
+                    visible: this.visible, // Include visibility
+                    // Include physics stub properties
+                    velocity: { x: this.velocity.x, y: this.velocity.y },
+                    angularVelocity: this.angularVelocity,
+                    mass: this.mass,
+                    // Include behavioral/constraint properties
+                    locked: this.locked,
+                    rotationConstraint: this.rotationConstraint,
+                    // Include metadata
+                    tag: this.tag,
+                    meta: this.meta,
+                    // transformMatrix is runtime generated, not typically serialized directly
+                };
+            }
+
+            // Reconstructs a Bone object from JSON data.
+            // This factory method creates the bone, but linking parents/children is handled by Skeleton.fromJson
+            static fromJson(data) {
+                const bone = new Bone(
+                    data.name,
+                    data.length,
+                    data.localRotation,
+                    null, // Parent is set later in Skeleton.fromJson
+                    data.id,
+                    data.color,
+                    data.lineWidth,
+                    data.scale,
+                    data.layer,
+                    data.velocity ? new Vector2(data.velocity.x, data.velocity.y) : null,
+                    data.angularVelocity,
+                    data.mass,
+                    data.locked,
+                    data.rotationConstraint,
+                    data.tag,
+                    data.meta,
+                    data.visible,
+                    null // transformMatrix is not loaded from JSON
+                );
+                return bone;
+            }
+
+            // Generates a simple unique ID for a bone.
+            static generateId() {
+                return '_' + Math.random().toString(36).substr(2, 9);
+            }
+        }
+
+        // Manages the entire character skeleton.
+        class Skeleton {
+            constructor() {
+                this.bones = {}; // Stores bones by name for easy access
+                this.rootBone = null; // The main bone (e.g., torso or pelvis) - now potentially multiple roots
+                this.basePosition = new Vector2(0, 0); // Base position of the entire character
+                this.stateStack = []; // For undo/redo functionality
+            }
+
+            // Utility method to link a child bone to a parent bone.
+            linkBones(parent, child) {
+                if (parent && child) {
+                    parent.addChild(child); // Bone.addChild now prevents duplicates
+                    // The child's parent reference is set within addChild already.
+                } else {
+                    console.warn("Attempted to link null parent or child bone.");
+                }
+            }
+
+            // Adds a bone to the skeleton. If parentName is provided, it tries to link it.
+            addBone(name, length, localRotation, parentName = null) {
+                if (this.bones[name]) {
+                    showMessage(`Bone '${name}' already exists!`);
+                    return null;
+                }
+
+                let parentBone = null;
+                if (parentName) {
+                    parentBone = this.bones[parentName];
+                    if (!parentBone) {
+                        showMessage(`Parent bone '${parentName}' not found!`);
+                        return null;
+                    }
+                }
+
+                const newBone = new Bone(name, length, localRotation, parentBone);
+                this.bones[name] = newBone;
+
+                if (parentBone) {
+                    this.linkBones(parentBone, newBone); // Use the new utility method
+                } else if (!this.rootBone) {
+                    this.rootBone = newBone; // First bone without a parent becomes the primary root
+                } else {
+                    // This bone is a new top-level bone but not the primary root. It will still be
+                    // updated by the new `update()` logic.
+                    showMessage("A primary root bone already exists. New bone added as an independent top-level bone.");
+                }
+                this.saveState(); // Save state after adding
+                return newBone;
+            }
+
+            // Removes a bone and all its children.
+            removeBone(boneName) {
+                const boneToRemove = this.bones[boneName];
+                if (!boneToRemove) {
+                    showMessage(`Bone '${boneName}' not found.`);
+                    return;
+                }
+
+                // Recursively remove children
+                const removeChildren = (bone) => {
+                    // Guard against already removed bones (e.g., if a parent was removed first)
+                    if (!this.bones[bone.name]) return;
+                    bone.children.forEach(child => removeChildren(child));
+                    delete this.bones[bone.name];
+                };
+
+                removeChildren(boneToRemove); // Start removal from the bone itself
+
+                // Remove from parent's children list
+                if (boneToRemove.parent) {
+                    boneToRemove.parent.children = boneToRemove.parent.children.filter(b => b.name !== boneName);
+                }
+
+                // If the primary root bone is removed, find a new one among remaining top-level bones.
+                if (this.rootBone && this.rootBone.name === boneName) {
+                    this.rootBone = Object.values(this.bones).find(b => !b.parent);
+                    if (!this.rootBone) {
+                        showMessage("No root bone remaining. Add a new bone to set a new primary root.");
+                    } else {
+                        showMessage(`Bone '${boneName}' removed. New primary root is '${this.rootBone.name}'.`);
+                    }
+                } else {
+                    showMessage(`Bone '${boneName}' and its children deleted.`);
+                }
+                this.saveState(); // Save state after removing
+            }
+
+            // Recalculates world transforms for all bones. Iterates over all top-level bones.
+            update() {
+                // Find all bones that don't have a parent (i.e., root bones of independent sub-skeletons)
+                const roots = Object.values(this.bones).filter(b => !b.parent);
+                
+                roots.forEach(root => {
+                    // Set the worldStart for each root. For simplicity, all roots share basePosition as a global offset.
+                    // In a more complex system, each root might have its own local base position.
+                    root.worldStart = this.basePosition.clone();
+                    root.updateWorldTransform();
+                });
+            }
+
+            // Serializes the entire skeleton to JSON.
+            toJson() {
+                const boneData = Object.values(this.bones).map(bone => bone.toJson());
+                return {
+                    basePosition: { x: this.basePosition.x, y: this.basePosition.y },
+                    bones: boneData,
+                    rootBoneName: this.rootBone ? this.rootBone.name : null
+                };
+            }
+
+            // Reconstructs a skeleton from JSON data.
+            static fromJson(data) {
+                const newSkeleton = new Skeleton();
+                newSkeleton.basePosition = new Vector2(data.basePosition.x, data.basePosition.y);
+
+                const tempBonesMap = {}; // Temporarily store bones by name for linking
+                data.bones.forEach(boneJson => {
+                    tempBonesMap[boneJson.name] = Bone.fromJson(boneJson);
+                });
+
+                // Link parents and children
+                data.bones.forEach(boneJson => {
+                    const bone = tempBonesMap[boneJson.name];
+                    if (boneJson.parentName && tempBonesMap[boneJson.parentName]) {
+                        const parentBone = tempBonesMap[boneJson.parentName];
+                        newSkeleton.linkBones(parentBone, bone); // Use the new utility method for linking
+                    }
+                });
+
+                newSkeleton.bones = tempBonesMap;
+                newSkeleton.rootBone = data.rootBoneName ? newSkeleton.bones[data.rootBoneName] : null;
+
+                newSkeleton.update(); // Ensure all bones have their references updated and initial FK run
+                return newSkeleton;
+            }
+
+            // Returns a hierarchical representation of the bones for UI or debugging.
+            getBoneHierarchy() {
+                const buildTree = (bone) => {
+                    return {
+                        name: bone.name,
+                        id: bone.id, // Include ID for unique identification in UI
+                        children: bone.children.map(buildTree)
+                    };
+                };
+
+                const roots = Object.values(this.bones).filter(b => !b.parent);
+                if (roots.length > 0) {
+                    // If there's a designated rootBone, start with that. Otherwise, return all independent roots.
+                    if (this.rootBone) {
+                         return [buildTree(this.rootBone)];
+                    } else {
+                         return roots.map(buildTree);
+                    }
+                }
+                return []; // Return empty array if no bones
+            }
+
+            // Saves the current state of the skeleton to the state stack.
+            saveState() {
+                // Limit stack size to prevent excessive memory usage
+                const MAX_STATES = 50;
+                if (this.stateStack.length >= MAX_STATES) {
+                    this.stateStack.shift(); // Remove the oldest state
+                }
+                // Deep clone the skeleton data to prevent reference issues
+                this.stateStack.push(JSON.parse(JSON.stringify(this.toJson())));
+            }
+
+            // Restores the last saved state from the stack.
+            restoreLastState() {
+                if (this.stateStack.length > 1) { // Need at least two states to pop one and have a previous to revert to
+                    this.stateStack.pop(); // Remove current state
+                    const lastState = this.stateStack[this.stateStack.length - 1]; // Get the previous state
+                    if (lastState) {
+                        // Create a new skeleton from the restored data
+                        const restoredSkeleton = Skeleton.fromJson(lastState);
+                        // Copy properties back to the current skeleton instance
+                        Object.assign(this, restoredSkeleton);
+                        showMessage("Restored previous state.");
+                        return true;
+                    }
+                }
+                showMessage("No previous state to restore.");
+                return false;
+            }
+        }
+
+        // --- Canvas Rendering and Interaction Logic ---
+
+        const canvas = document.getElementById('characterCanvas');
+        const ctx = canvas.getContext('2d');
+        let skeleton = new Skeleton();
+        let selectedBone = null;
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // UI elements
+        const boneNameInput = document.getElementById('boneNameInput');
+        const addBoneBtn = document.getElementById('addBoneBtn');
+        const boneList = document.getElementById('boneList');
+        const boneLengthSlider = document.getElementById('boneLengthSlider');
+        const boneLengthValue = document.getElementById('boneLengthValue');
+        const boneRotationSlider = document.getElementById('boneRotationSlider');
+        const boneRotationValue = document.getElementById('boneRotationValue');
+        const boneXSlider = document.getElementById('boneXSlider');
+        const boneXValue = document.getElementById('boneXValue');
+        const boneYSlider = document.getElementById('boneYSlider');
+        const boneYValue = document.getElementById('boneYValue');
+        const deleteBoneBtn = document.getElementById('deleteBoneBtn');
+        const saveCharacterBtn = document.getElementById('saveCharacterBtn');
+        const loadCharacterInput = document.getElementById('loadCharacterInput');
+        const loadCharacterBtn = document.getElementById('loadCharacterBtn');
+        const resetCharacterBtn = document.getElementById('resetCharacterBtn');
+
+        // --- Canvas Setup and Drawing ---
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            // Center the character (applies to the global base position for all roots)
+            skeleton.basePosition.x = canvas.width / 2;
+            skeleton.basePosition.y = canvas.height / 2;
+            draw();
+        }
+
+        function drawBone(bone) {
+            // Only draw if visible
+            if (!bone.visible) return;
+
+            ctx.beginPath();
+            ctx.lineWidth = bone.lineWidth;
+            ctx.lineCap = 'round'; // Make bone ends rounded
+            ctx.strokeStyle = selectedBone === bone ? '#3b82f6' : bone.color; // Highlight selected bone
+            ctx.fillStyle = selectedBone === bone ? '#bfdbfe' : bone.color; // Fill for joints/caps
+            
+            // Draw the bone as a rounded rectangle (capsule)
+            const boneStart = bone.worldStart;
+            const boneEnd = bone.worldEnd;
+
+            // Calculate direction vector of the bone
+            const dir = boneEnd.subtract(boneStart);
+            const angle = Math.atan2(dir.y, dir.x);
+
+            // Translate and rotate the canvas context to draw the bone
+            ctx.save();
+            ctx.translate(boneStart.x, boneStart.y);
+            ctx.rotate(angle);
+
+            // Draw the main rectangular part of the bone
+            ctx.fillRect(0, -bone.lineWidth / 2, bone.length * bone.scale, bone.lineWidth); // Apply scale here
+            // Draw the rounded end caps
+            ctx.beginPath();
+            ctx.arc(0, 0, bone.lineWidth / 2, angle + Math.PI / 2, angle - Math.PI / 2); // Start cap
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(bone.length * bone.scale, 0, bone.lineWidth / 2, angle - Math.PI / 2, angle + Math.PI / 2); // End cap (apply scale)
+            ctx.fill();
+
+            // Draw the stroke
+            ctx.strokeRect(0, -bone.lineWidth / 2, bone.length * bone.scale, bone.lineWidth); // Rectangular part (apply scale)
+            ctx.beginPath();
+            ctx.arc(0, 0, bone.lineWidth / 2, angle + Math.PI / 2, angle - Math.PI / 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(bone.length * bone.scale, 0, bone.lineWidth / 2, angle - Math.PI / 2, angle + Math.PI / 2);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Draw a circle at the joint (start of the bone)
+            ctx.beginPath();
+            ctx.arc(boneStart.x, boneStart.y, bone.lineWidth / 2 + (selectedBone === bone ? 2 : 0), 0, Math.PI * 2);
+            ctx.fillStyle = selectedBone === bone ? '#3b82f6' : '#6366f1'; // Joint color
+            ctx.fill();
+            ctx.strokeStyle = '#4f46e5';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            skeleton.update(); // Recalculate all bone positions
+            
+            // Draw all bones based on their layer for Z-ordering (simple sorting for now)
+            // In a more complex system, this would be managed by a dedicated renderer.
+            const bonesToDraw = Object.values(skeleton.bones).sort((a, b) => a.layer - b.layer);
+
+            bonesToDraw.forEach(bone => {
+                drawBone(bone);
+            });
+            
+            // Draw root bone base position (character origin)
+            ctx.beginPath();
+            ctx.arc(skeleton.basePosition.x, skeleton.basePosition.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef4444';
+            ctx.fill();
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // --- Event Listeners for UI and Canvas Interaction ---
+
+        function updateBoneList() {
+            boneList.innerHTML = '';
+            Object.values(skeleton.bones).forEach(bone => {
+                const li = document.createElement('li');
+                li.className = 'bone-list-item';
+                if (selectedBone === bone) {
+                    li.classList.add('selected');
+                }
+                li.textContent = bone.name;
+                li.dataset.boneName = bone.name;
+                li.addEventListener('click', () => {
+                    selectBone(bone);
+                });
+                boneList.appendChild(li);
+            });
+        }
+
+        function selectBone(bone) {
+            selectedBone = bone;
+            if (selectedBone) {
+                boneLengthSlider.value = selectedBone.length;
+                boneLengthValue.textContent = selectedBone.length;
+                boneRotationSlider.value = selectedBone.localRotation;
+                boneRotationValue.textContent = `${Math.round(selectedBone.localRotation)}°`; // Round for display
+
+                // Only allow X/Y position control for the root bone
+                if (selectedBone === skeleton.rootBone) { // Check against the designated primary root
+                    boneXSlider.value = skeleton.basePosition.x - (canvas.width / 2); // Relative to center
+                    boneXValue.textContent = Math.round(skeleton.basePosition.x - (canvas.width / 2));
+                    boneYSlider.value = skeleton.basePosition.y - (canvas.height / 2); // Relative to center
+                    boneYValue.textContent = Math.round(skeleton.basePosition.y - (canvas.height / 2));
+                    boneXSlider.disabled = false;
+                    boneYSlider.disabled = false;
+                } else {
+                    boneXSlider.value = 0; boneXValue.textContent = 0;
+                    boneYSlider.value = 0; boneYValue.textContent = 0;
+                    boneXSlider.disabled = true;
+                    boneYSlider.disabled = true;
+                }
+            } else {
+                // Reset sliders if no bone is selected
+                boneLengthSlider.value = 50; boneLengthValue.textContent = 50;
+                boneRotationSlider.value = 0; boneRotationValue.textContent = '0°';
+                boneXSlider.value = 0; boneXValue.textContent = 0;
+                boneYSlider.value = 0; boneYValue.textContent = 0;
+                boneXSlider.disabled = true;
+                boneYSlider.disabled = true;
+            }
+            updateBoneList(); // Update highlight
+            draw();
+        }
+
+        addBoneBtn.addEventListener('click', () => {
+            const boneName = boneNameInput.value.trim();
+            if (boneName) {
+                // Default length and rotation for new bones
+                const newBone = skeleton.addBone(boneName, 50, 0, selectedBone ? selectedBone.name : null);
+                if (newBone) {
+                    selectBone(newBone); // Select the newly added bone
+                    boneNameInput.value = '';
+                    draw();
+                }
+            } else {
+                showMessage("Please enter a bone name.");
+            }
+        });
+
+        deleteBoneBtn.addEventListener('click', () => {
+            if (selectedBone) {
+                const confirmDelete = true; // In a real app, use a custom modal for confirmation
+                if (confirmDelete) {
+                    skeleton.removeBone(selectedBone.name);
+                    selectedBone = null;
+                    updateBoneList();
+                    draw();
+                }
+            } else {
+                showMessage("No bone selected to delete.");
+            }
+        });
+
+        boneLengthSlider.addEventListener('input', (e) => {
+            if (selectedBone) {
+                selectedBone.length = parseInt(e.target.value);
+                boneLengthValue.textContent = selectedBone.length;
+                skeleton.saveState(); // Save state after modification
+                draw();
+            }
+        });
+
+        boneRotationSlider.addEventListener('input', (e) => {
+            if (selectedBone) {
+                selectedBone.localRotation = parseInt(e.target.value);
+                // Re-normalize after UI input to keep within -180 to 180
+                selectedBone.localRotation = (selectedBone.localRotation + 540) % 360 - 180;
+                boneRotationValue.textContent = `${Math.round(selectedBone.localRotation)}°`;
+                skeleton.saveState(); // Save state after modification
+                draw();
+            }
+        });
+
+        boneXSlider.addEventListener('input', (e) => {
+            if (selectedBone === skeleton.rootBone) {
+                const offsetX = parseInt(e.target.value);
+                skeleton.basePosition.x = (canvas.width / 2) + offsetX;
+                boneXValue.textContent = offsetX;
+                skeleton.saveState(); // Save state after modification
+                draw();
+            }
+        });
+
+        boneYSlider.addEventListener('input', (e) => {
+            if (selectedBone === skeleton.rootBone) {
+                const offsetY = parseInt(e.target.value);
+                skeleton.basePosition.y = (canvas.height / 2) + offsetY;
+                boneYValue.textContent = offsetY;
+                skeleton.saveState(); // Save state after modification
+                draw();
+            }
+        });
+
+        // --- Mouse Interaction on Canvas ---
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Check if any bone is clicked
+            let clickedBone = null;
+            const bonesArray = Object.values(skeleton.bones);
+            // Iterate in reverse order to select top-most bones first for overlapping click areas
+            for (let i = bonesArray.length - 1; i >= 0; i--) {
+                const bone = bonesArray[i];
+                // Only consider visible bones for interaction
+                if (!bone.visible) continue;
+
+                // Check distance from mouse to bone's line segment and its joints
+                const distToStart = new Vector2(mouseX, mouseY).subtract(bone.worldStart).length();
+                const distToEnd = new Vector2(mouseX, mouseY).subtract(bone.worldEnd).length();
+
+                // Check if mouse is near start or end joint (with padding)
+                if (distToStart < bone.lineWidth / 2 + 5 || distToEnd < bone.lineWidth / 2 + 5) {
+                    clickedBone = bone;
+                    break;
+                }
+
+                // Check if mouse is near the bone segment itself
+                const line = bone.worldEnd.subtract(bone.worldStart);
+                const lenSq = line.x * line.x + line.y * line.y;
+                if (lenSq === 0) continue; // Avoid division by zero for zero-length bones
+
+                const t = Math.max(0, Math.min(1, ((mouseX - bone.worldStart.x) * line.x + (mouseY - bone.worldStart.y) * line.y) / lenSq));
+                const projectionX = bone.worldStart.x + t * line.x;
+                const projectionY = bone.worldStart.y + t * line.y;
+
+                const distToSegment = new Vector2(mouseX, mouseY).subtract(new Vector2(projectionX, projectionY)).length();
+
+                if (distToSegment < bone.lineWidth / 2 + 5) { // Add some padding for easier clicking
+                    clickedBone = bone;
+                    break;
+                }
+            }
+
+            if (clickedBone) {
+                selectBone(clickedBone);
+                isDragging = true;
+                // If it's the root bone, enable dragging the entire character
+                if (selectedBone === skeleton.rootBone) { // Check against the designated primary root
+                    dragOffsetX = mouseX - skeleton.basePosition.x;
+                    dragOffsetY = mouseY - skeleton.basePosition.y;
+                }
+            } else {
+                selectBone(null); // Deselect if clicked outside bones
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging || !selectedBone) return;
+            // If the bone is locked, prevent manipulation
+            if (selectedBone.locked) {
+                showMessage(`Bone '${selectedBone.name}' is locked.`);
+                return;
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            if (selectedBone === skeleton.rootBone) { // Check against the designated primary root
+                // Drag the root bone (and thus the whole character)
+                skeleton.basePosition.x = mouseX - dragOffsetX;
+                skeleton.basePosition.y = mouseY - dragOffsetY;
+                // Update sliders for base position
+                boneXSlider.value = skeleton.basePosition.x - (canvas.width / 2);
+                boneXValue.textContent = Math.round(skeleton.basePosition.x - (canvas.width / 2));
+                boneYSlider.value = skeleton.basePosition.y - (canvas.height / 2);
+                boneYValue.textContent = Math.round(skeleton.basePosition.y - (canvas.height / 2));
+            } else {
+                // Rotate non-root bones based on mouse position relative to parent's end point
+                const parentEnd = selectedBone.parent.worldEnd;
+                const vecToMouse = new Vector2(mouseX - parentEnd.x, mouseY - parentEnd.y);
+                const currentBoneVec = selectedBone.worldEnd.subtract(parentEnd);
+
+                let angleDiffRad = Math.atan2(vecToMouse.y, vecToMouse.x) - Math.atan2(currentBoneVec.y, currentBoneVec.x);
+                // Normalize angle difference to -PI to PI
+                angleDiffRad = (angleDiffRad + Math.PI) % (2 * Math.PI);
+                if (angleDiffRad < -Math.PI) angleDiffRad += (2 * Math.PI);
+                if (angleDiffRad > Math.PI) angleDiffRad -= (2 * Math.PI);
+
+                const angleDiffDeg = (angleDiffRad * 180) / Math.PI;
+
+                let newLocalRotation = selectedBone.localRotation + angleDiffDeg;
+
+                // Apply rotation constraints if they exist
+                if (selectedBone.rotationConstraint) {
+                    const min = selectedBone.rotationConstraint.min;
+                    const max = selectedBone.rotationConstraint.max;
+                    // Normalize the newLocalRotation before clamping, then clamp.
+                    // This ensures clamping works correctly across the -180/180 wrap-around
+                    newLocalRotation = (newLocalRotation + 540) % 360 - 180;
+                    newLocalRotation = Math.max(min, Math.min(max, newLocalRotation));
+                }
+
+                selectedBone.localRotation = newLocalRotation;
+                
+                boneRotationSlider.value = selectedBone.localRotation;
+                boneRotationValue.textContent = `${Math.round(selectedBone.localRotation)}°`;
+            }
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (isDragging && selectedBone) {
+                 skeleton.saveState(); // Save state after drag/rotation ends
+            }
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            if (isDragging && selectedBone) { // Save state if mouse leaves canvas while dragging
+                skeleton.saveState();
+            }
+            isDragging = false;
+        });
+        
+        // --- Save / Load / Reset Functionality ---
+        saveCharacterBtn.addEventListener('click', () => {
+            if (Object.keys(skeleton.bones).length === 0) {
+                showMessage("No character to save!");
+                return;
+            }
+            const characterData = skeleton.toJson();
+            const dataStr = JSON.stringify(characterData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'character_skeleton.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showMessage("Character saved successfully!");
+        });
+
+        loadCharacterBtn.addEventListener('click', () => {
+            loadCharacterInput.click(); // Trigger the hidden file input click
+        });
+
+        loadCharacterInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const loadedData = JSON.parse(event.target.result);
+                        skeleton = Skeleton.fromJson(loadedData);
+                        selectedBone = null; // Deselect any previously selected bone
+                        updateBoneList();
+                        draw();
+                        skeleton.saveState(); // Save initial state after loading
+                        showMessage("Character loaded successfully!");
+                    } catch (error) {
+                        showMessage("Error loading character: Invalid JSON file.");
+                        console.error("Error parsing JSON:", error);
+                    }
+                };
+                reader.onerror = () => {
+                    showMessage("Error reading file.");
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        resetCharacterBtn.addEventListener('click', () => {
+            skeleton = new Skeleton();
+            selectedBone = null;
+            resizeCanvas(); // Re-center and redraw
+            updateBoneList();
+            skeleton.saveState(); // Save initial empty state after reset
+            showMessage("Character reset!");
+        });
+
+
+        // Initial setup
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Initial canvas resize and draw
+        selectBone(null); // Initialize sliders and bone list
+        skeleton.saveState(); // Save initial empty state on first load
+    </script>
+</body>
+</html>
